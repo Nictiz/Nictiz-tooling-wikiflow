@@ -35,4 +35,54 @@ function WikiApi() {
         }
         return null
     }
+
+    /**
+     * Get all the page revisions
+     * @param page_id the id for the page we're interested in
+     * @returns An object with the revisions. The keys are numbers from 0 on,
+     *          the values are objects containing the keys "revid", "parentid",
+     *          "user", "timestamp" and "comment". On error, null is returned
+     */
+    this.getPageRevisions = function(page_id) {
+        // Start the synchronous request, interpreting the result as JSON
+        let http_request = new XMLHttpRequest()
+        let url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
+        http_request.open("GET", url, false)
+        http_request.responseType = "json"
+        http_request.send()
+        if (http_request.readyState === XMLHttpRequest.DONE) {
+            try {
+                return http_request.response.query.pages[page_id].revisions
+            } catch (error) {
+                // Silently ignore to return null
+            }
+        }
+
+        return null
+    }
+
+
+    /**
+     * Generic function to call the query action
+     * @param parameters a associative array with the parameters to query on
+     * @returns the response in JSON format
+     */
+    this.query = function(parameters) {
+        let url = this.base_url + "?action=query&format=json"
+        for (let key in parameters) {
+            url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key])
+        }
+        let http_request = new XMLHttpRequest()
+        http_request.open("GET", url, false)
+        http_request.responseType = "json"
+        http_request.send()
+        if (http_request.readyState === XMLHttpRequest.DONE) {
+            try {
+                return http_request.response.query
+            } catch (error) {
+                // Silently ignore to return null
+            }
+        }
+        return null
+    }
 }
