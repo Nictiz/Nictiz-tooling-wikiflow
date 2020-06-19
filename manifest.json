@@ -1,0 +1,17 @@
+{
+    "manifest_version": 2,
+    "name": "WikiFlow",
+    "version": "0.1",
+    "description": "Some automation for the new Wiki workflow during the summer release",
+  
+    "content_scripts": [
+        {
+            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vissue-*&action=edit"],
+            "js": ["wiki_api.js", "populate_issue.js"]
+        },
+        {
+            "matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:V2019.01*"],
+            "js": ["create_new_issue.js"]
+        }
+    ]
+}
