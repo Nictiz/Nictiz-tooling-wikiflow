@@ -10,79 +10,96 @@ function WikiApi() {
      * Query the wikitext content for a given page.
      * @param query_key a query key as understood by the "parse" action to
      *                   select the specified page
-     * @returns an object with the raw wikitext ("wikitext"), the page id 
-     *          ("pageid") and the id of the used revision ("revid"). On 
-     *          failure, null is returned.
+     * @param callback a callback function that should accept the result as a
+     *        javascript object, with the following keys:
+     *        * "wikitext": the raw wikitext
+     *        * "pageid": the page id
+     *        * "revid": the id of the used revision
+     *        On failure, null is returend
      */
-    this.getWikiText = function(query_key) {
+    this.getWikiText = function(query_key, callback) {
         // Start a synchronous request, interpreting the result as JSON
         let url = this.base_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key
         let http_request = new XMLHttpRequest()
-        http_request.open("GET", url, false)
+        http_request.open("GET", url)
         http_request.responseType = "json"
-        http_request.send()
-        if (http_request.readyState === XMLHttpRequest.DONE) {
+        http_request.onload = function() {
             try {
                 let wikitext = http_request.response.parse.wikitext["*"]
                 let pageid   = http_request.response.parse.pageid
                 let revid    = http_request.response.parse.revid
                 if (wikitext != null && pageid != null && revid != null) {
-                    return {"wikitext": wikitext, "pageid": pageid, "revid": revid}
+                    callback({"wikitext": wikitext, "pageid": pageid, "revid": revid})
                 }
             } catch (error) {
-                // Silently ignore to return null
+                callback(null)
             }
         }
-        return null
+        http_request.onerror = function() {
+            callback(null)
+        }
+        http_request.send()
     }
 
     /**
      * Get all the page revisions
      * @param page_id the id for the page we're interested in
-     * @returns An object with the revisions. The keys are numbers from 0 on,
-     *          the values are objects containing the keys "revid", "parentid",
-     *          "user", "timestamp" and "comment". On error, null is returned
+     * @param callback a callback function that should accept the result as a
+     *        javascript object with the revisions. The keys are numbers from 0
+     *        on, the values are objects containing the keys "revid",
+     *        "parentid", "user", "timestamp" and "comment".
+     *        On error, null is returned
      */
-    this.getPageRevisions = function(page_id) {
+    this.getPageRevisions = function(page_id, callback) {
         // Start the synchronous request, interpreting the result as JSON
         let http_request = new XMLHttpRequest()
         let url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
-        http_request.open("GET", url, false)
+        http_request.open("GET", url)
         http_request.responseType = "json"
-        http_request.send()
-        if (http_request.readyState === XMLHttpRequest.DONE) {
-            try {
-                return http_request.response.query.pages[page_id].revisions
-            } catch (error) {
-                // Silently ignore to return null
+        http_request.onload = function() {
+            if (http_request.readyState === XMLHttpRequest.DONE) {
+                try {
+                    callback(http_request.response.query.pages[page_id].revisions)
+                } catch (error) {
+                    callback(null)
+                }
             }
         }
+        http_request.onerror = function() {
+            callback(null)
+        }
 
-        return null
+        http_request.send()
     }
 
 
     /**
      * Generic function to call the query action
      * @param parameters a associative array with the parameters to query on
-     * @returns the response in JSON format
+     * @param callback a callback function that should accept the result as a
+     *        javascript object containing the "query" part of the response.
+     *        On error, null is returned
      */
-    this.query = function(parameters) {
+    this.query = function(parameters, callback) {
         let url = this.base_url + "?action=query&format=json"
         for (let key in parameters) {
             url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key])
         }
         let http_request = new XMLHttpRequest()
-        http_request.open("GET", url, false)
+        http_request.open("GET", url)
         http_request.responseType = "json"
-        http_request.send()
-        if (http_request.readyState === XMLHttpRequest.DONE) {
-            try {
-                return http_request.response.query
-            } catch (error) {
-                // Silently ignore to return null
+        http_request.onload = function() {
+            if (http_request.readyState === XMLHttpRequest.DONE) {
+                try {
+                    callback(http_request.response.query)
+                } catch (error) {
+                    callback(null)
+                }
             }
         }
-        return null
+        http_request.onerror = function() {
+            callback(null)
+        }
+        http_request.send()
     }
 }
