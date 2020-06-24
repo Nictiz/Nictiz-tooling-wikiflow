@@ -1,7 +1,8 @@
 {
     "manifest_version": 2,
     "name": "WikiFlow",
-    "version": "0.2",
+    "author": "Pieter Edelman",
+    "version": "0.3.0",
     "description": "Some automation for the new Wiki workflow during the summer release",
   
     "content_scripts": [
@@ -15,7 +16,7 @@
         },
         {
             "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vprepub_*&action=edit"],
-            "js": ["wiki_api.js", "diff_issue.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
+            "js": ["wiki_api.js", "diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css"]
         }
     ]
