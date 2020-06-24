@@ -20,23 +20,15 @@
     }
 
     // Ok, lets go ahead
-    let orig = fetchWikitextFromProduction()
-    if (orig != null) {
-        let issue_text = modifyText(orig)
-        document.getElementById("wpTextbox1").textContent = issue_text
-        document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
-    }
-
-    function fetchWikitextFromProduction() {
-        let wiki_api = new WikiApi()
-        let production_info = wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2])
+    let wiki_api = new WikiApi()
+    wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2], function(production_info) {
         if (production_info != null) {
-            return production_info["wikitext"]
+            document.getElementById("wpTextbox1").textContent = modifyText(production_info["wikitext"])
+            document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
         } else {
             console.log("Couldn't fetch wikitext from production page")
         }
-        return null
-    }
+    })
 
     function modifyText(orig) {
         // We modify links to "Vprepub", because that's what we probably want to link to
