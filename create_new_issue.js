@@ -10,7 +10,7 @@
     window.has_run = true
 
     // Parse the URL and check if this is a newly created issue page
-    let url_parts = /.*\/wiki\/MedMij:V2019.01(.*)/.exec(window.location.href)
+    let url_parts = /\/wiki\/MedMij:V2019.01(.*)/.exec(new URL(window.location.href).pathname)
     if (url_parts == null) return
 
     // Insert a link to create a new issue
