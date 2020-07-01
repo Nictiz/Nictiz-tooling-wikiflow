@@ -1,0 +1,1 @@
+../Common/JS/create_new_issue.js
