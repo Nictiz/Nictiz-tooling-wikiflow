@@ -111,7 +111,6 @@
                 if (value == "none") {
                     restoreEditor()
                 } else {
-                    textarea.setAttribute("disabled", true)
                     textarea.setAttribute("style", "color: grey");            
                     getWikiTextForIssue(value)
                 }
@@ -124,6 +123,18 @@
             let div = document.createElement("div")
             div.appendChild(label)
             div.appendChild(dropdown)
+
+            // We'd also like to add a checkbox to force the diff view
+            let threeway_check = document.createElement("input")
+            threeway_check.setAttribute("type", "checkbox")
+            threeway_check.setAttribute("id", "threeway_check")
+
+            let threeway_label = document.createElement("label")
+            threeway_label.setAttribute("for", "threeway_checkbox")
+            threeway_label.innerHTML = "Gebruik altijd de diff-tool"
+
+            div.appendChild(threeway_check)
+            div.appendChild(threeway_label)
 
             let heading = document.getElementById("firstHeading")
             heading.insertAdjacentElement("afterend", div)
@@ -140,7 +151,6 @@
         let header = document.getElementById("CodeMirror-header")
         if (header != null) header.remove()
 
-        textarea.removeAttribute("disabled")
         textarea.setAttribute("style", "color: black");
     }
 
@@ -215,7 +225,7 @@
             }
         })
 
-        if (has_conflicts) {
+        if (has_conflicts || document.getElementById("threeway_check").checked) {
             // If we have conflicts, load a three way diff to manually resolve 
             // them, with as much already merged as possible
             loadDiffEditor(merged)
@@ -264,6 +274,7 @@
             // Mirror all changes in the CodeMirror editor to the hidden wiki 
             // editor, where it can be picked up by the other functionality
             // of the edit page. Rather crude, but it will do for now.
+            textarea.textContent = merged
             code_mirror.editor().on("change", function() {
                 textarea.textContent = code_mirror.editor().getValue()
             })
