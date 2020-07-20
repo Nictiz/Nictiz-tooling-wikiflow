@@ -4,7 +4,7 @@
  * WARNING: Contains magic variables for the  Informatiestandaarden wiki.
  */
 function WikiApi() {
-    this.base_url = "https://informatiestandaarden.nictiz.nl/api.php"
+    this.base_url = new URL(window.location.href).origin + "/api.php";
 
     /** 
      * Query the wikitext content for a given page.
@@ -19,26 +19,26 @@ function WikiApi() {
      */
     this.getWikiText = function(query_key, callback) {
         // Start a synchronous request, interpreting the result as JSON
-        let url = this.base_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key
-        let http_request = new XMLHttpRequest()
-        http_request.open("GET", url)
-        http_request.responseType = "json"
+        var url = this.base_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key;
+        var http_request = new XMLHttpRequest();
+        http_request.open("GET", url);
+        http_request.responseType = "json";
         http_request.onload = function() {
             try {
-                let wikitext = http_request.response.parse.wikitext["*"]
-                let pageid   = http_request.response.parse.pageid
-                let revid    = http_request.response.parse.revid
+                var wikitext = http_request.response.parse.wikitext["*"];
+                var pageid   = http_request.response.parse.pageid;
+                var revid    = http_request.response.parse.revid;
                 if (wikitext != null && pageid != null && revid != null) {
-                    callback({"wikitext": wikitext, "pageid": pageid, "revid": revid})
+                    callback({"wikitext": wikitext, "pageid": pageid, "revid": revid});
                 }
             } catch (error) {
-                callback(null)
+                callback(null);
             }
         }
         http_request.onerror = function() {
-            callback(null)
+            callback(null);
         }
-        http_request.send()
+        http_request.send();
     }
 
     /**
@@ -52,24 +52,24 @@ function WikiApi() {
      */
     this.getPageRevisions = function(page_id, callback) {
         // Start the synchronous request, interpreting the result as JSON
-        let http_request = new XMLHttpRequest()
-        let url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
-        http_request.open("GET", url)
-        http_request.responseType = "json"
+        var http_request = new XMLHttpRequest();
+        var url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id;
+        http_request.open("GET", url);
+        http_request.responseType = "json";
         http_request.onload = function() {
             if (http_request.readyState === XMLHttpRequest.DONE) {
                 try {
-                    callback(http_request.response.query.pages[page_id].revisions)
+                    callback(http_request.response.query.pages[page_id].revisions);
                 } catch (error) {
-                    callback(null)
+                    callback(null);
                 }
             }
         }
         http_request.onerror = function() {
-            callback(null)
+            callback(null);
         }
 
-        http_request.send()
+        http_request.send();
     }
 
 
@@ -81,25 +81,25 @@ function WikiApi() {
      *        On error, null is returned
      */
     this.query = function(parameters, callback) {
-        let url = this.base_url + "?action=query&format=json"
-        for (let key in parameters) {
-            url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key])
+        var url = this.base_url + "?action=query&format=json";
+        for (var key in parameters) {
+            url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key]);
         }
-        let http_request = new XMLHttpRequest()
-        http_request.open("GET", url)
-        http_request.responseType = "json"
+        var http_request = new XMLHttpRequest();
+        http_request.open("GET", url);
+        http_request.responseType = "json";
         http_request.onload = function() {
             if (http_request.readyState === XMLHttpRequest.DONE) {
                 try {
-                    callback(http_request.response.query)
+                    callback(http_request.response.query);
                 } catch (error) {
-                    callback(null)
+                    callback(null);
                 }
             }
         }
         http_request.onerror = function() {
-            callback(null)
+            callback(null);
         }
-        http_request.send()
+        http_request.send();
     }
 }
