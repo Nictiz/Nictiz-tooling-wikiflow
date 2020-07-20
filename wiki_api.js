@@ -32,6 +32,7 @@ function WikiApi() {
                     callback({"wikitext": wikitext, "pageid": pageid, "revid": revid})
                 }
             } catch (error) {
+                console.log(error)
                 callback(null)
             }
         }

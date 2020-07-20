@@ -6,7 +6,7 @@
     window.has_run = true;
 
     // Parse the url to see which page we're on
-    let url_parts = /index.php\?title=MedMij:Vprepub_(.*?)(&*)?&action=edit/.exec(window.location.href)
+    let url_parts = /index.php\?title=MedMij:Vprepub\/(.*?)(&*)?&action=edit/.exec(window.location.href)
     if (url_parts == null) return
 
     let wiki_api = new WikiApi()
@@ -50,10 +50,10 @@
      * with the same title.
      */
     function extractIssueIdsFromSiteInfo() {
-        let issue_nums = []
+        let issue_ids = []
 
         // Inspect all pages starting with Vissue in this namespace
-        wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id}, info => {
+        wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500}, info => {
             if (info != null) {
                 // In the URL, spaces are replaced by underscores, so to get
                 // the title, we have, to replace them
@@ -65,7 +65,7 @@
                     if (issue.title.endsWith(naked_page_title)) {
                         let title_parts = /MedMij:Vissue-(.*?) /.exec(issue.title)
                         if (title_parts != null && title_parts.length > 1) {
-                            issue_nums.push(title_parts[1])
+                            issue_ids.push(title_parts[1])
                         } else {
                             console.log("Couldn't extract issue num from '" + issue.title + "'")
                         }
@@ -75,7 +75,7 @@
                 // Next in line is to add a dropdown with the issue id's to the
                 // page. This concludes the modification of the page, the next
                 // action is triggered when the user selects an issue.
-                populateIssues(issue_nums)
+                populateIssues(issue_ids)
             } else {
                 console.log("Couldn't query the pages in the MedMij namespace")
             }
@@ -111,6 +111,8 @@
                 if (value == "none") {
                     restoreEditor()
                 } else {
+                    textarea.setAttribute("disabled", true)
+                    textarea.setAttribute("style", "color: grey");            
                     getWikiTextForIssue(value)
                 }
             }
@@ -137,6 +139,9 @@
         }
         let header = document.getElementById("CodeMirror-header")
         if (header != null) header.remove()
+
+        textarea.removeAttribute("disabled")
+        textarea.setAttribute("style", "color: black");
     }
 
     /** Get the issue text for the selected issue in the issue box, plus the
@@ -151,23 +156,26 @@
                 // so lets convert it already
                 issue_info.wikitext = changeIssueBoxToPrepub(issue_info.wikitext)
 
-                // Now reconstruct the common ancestor by going back to the
-                // first revision.
-                wiki_api.getPageRevisions(issue_info["pageid"], issue_revisions => {
-                    if (issue_revisions != null) {
-                        let first_revision = issue_revisions[issue_revisions.length - 1].revid
-                        wiki_api.getWikiText("oldid=" + first_revision, response => {
-                            ancestor_info = response // Save for the next function
+                // All links were Vprepub_, but should now be Vprepub/
+                issue_info.wikitext = issue_info.wikitext.replace(new RegExp("Vprepub_", "g"), "Vprepub/")
 
-                            if (ancestor_info != null) {
-                                ancestor_info.wikitext = changeIssueBoxToPrepub(ancestor_info.wikitext)
+                // Now reconstruct the common ancestor from the production page
+                wiki_api.getWikiText("page=MedMij:V2019.01_" + url_parts[1], response => {
+                    ancestor_info = response // Save for the next function
 
-                                // Now that we have the issue text plus common
-                                // ancestor, it's to to see if we can merge the
-                                // two.
-                                autoMerge()
-                            }
-                        })
+                    if (ancestor_info != null) {
+                        // We modify links to "Vprepub", because that's what we probably want to link to
+                        let modified = ancestor_info.wikitext.replace(new RegExp("V2019.01_", "g"), "Vprepub/")
+        
+                        // Inject __NOINDEX__
+                        modified = "__NOINDEX__\n" + modified
+
+                        ancestor_info.wikitext = changeIssueBoxToPrepub(modified)
+
+                        // Now that we have the issue text plus common
+                        // ancestor, it's to to see if we can merge the
+                        // two.
+                        autoMerge()
                     }
                 })
             }
@@ -263,6 +271,7 @@
     }
 
     function changeIssueBoxToPrepub(text) {
-        return text.replace(/{{MedMij:Vissue_Issuebox(.*?)\|.*?}}/, "{{MedMij:Vdraft_Issuebox$1}}")
+        return text.replace(/{{MedMij:Vissue_Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
     }
+
 })()
