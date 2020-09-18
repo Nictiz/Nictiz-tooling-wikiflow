@@ -17,29 +17,24 @@ function WikiApi() {
      *        * "revid": the id of the used revision
      *        On failure, null is returend
      */
-    this.getWikiText = function(query_key, callback) {
+    this.getWikiText = async function(query_key) {
         // Start a synchronous request, interpreting the result as JSON
         let url = this.base_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key
-        let http_request = new XMLHttpRequest()
-        http_request.open("GET", url)
-        http_request.responseType = "json"
-        http_request.onload = function() {
+        let response = await fetch(url)
+        if (response.ok) {
             try {
-                let wikitext = http_request.response.parse.wikitext["*"]
-                let pageid   = http_request.response.parse.pageid
-                let revid    = http_request.response.parse.revid
+                let json = await response.json()
+                let wikitext = json.parse.wikitext["*"]
+                let pageid   = json.parse.pageid
+                let revid    = json.parse.revid
                 if (wikitext != null && pageid != null && revid != null) {
-                    callback({"wikitext": wikitext, "pageid": pageid, "revid": revid})
+                    return {"wikitext": wikitext, "pageid": pageid, "revid": revid}
                 }
             } catch (error) {
                 console.log(error)
-                callback(null)
             }
         }
-        http_request.onerror = function() {
-            callback(null)
-        }
-        http_request.send()
+        return null
     }
 
     /**
@@ -51,26 +46,15 @@ function WikiApi() {
      *        "parentid", "user", "timestamp" and "comment".
      *        On error, null is returned
      */
-    this.getPageRevisions = function(page_id, callback) {
+    this.getPageRevisions = async function(page_id) {
         // Start the synchronous request, interpreting the result as JSON
-        let http_request = new XMLHttpRequest()
         let url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
-        http_request.open("GET", url)
-        http_request.responseType = "json"
-        http_request.onload = function() {
-            if (http_request.readyState === XMLHttpRequest.DONE) {
-                try {
-                    callback(http_request.response.query.pages[page_id].revisions)
-                } catch (error) {
-                    callback(null)
-                }
-            }
+        let response = await fetch(url)
+        if (response.ok) {
+            let json = await response.json()
+            return json.query.pages[page_id].revisions
         }
-        http_request.onerror = function() {
-            callback(null)
-        }
-
-        http_request.send()
+        return null
     }
 
 
@@ -81,26 +65,16 @@ function WikiApi() {
      *        javascript object containing the "query" part of the response.
      *        On error, null is returned
      */
-    this.query = function(parameters, callback) {
+    this.query = async function(parameters) {
         let url = this.base_url + "?action=query&format=json"
         for (let key in parameters) {
             url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key])
         }
-        let http_request = new XMLHttpRequest()
-        http_request.open("GET", url)
-        http_request.responseType = "json"
-        http_request.onload = function() {
-            if (http_request.readyState === XMLHttpRequest.DONE) {
-                try {
-                    callback(http_request.response.query)
-                } catch (error) {
-                    callback(null)
-                }
-            }
+        let response = await fetch(url)
+        if (response.ok) {
+            let json = await response.json()
+            return json.query
         }
-        http_request.onerror = function() {
-            callback(null)
-        }
-        http_request.send()
+        return null
     }
 }

@@ -3,7 +3,7 @@
  * with the contents of the corresponding Vcurrent page, with the necessary
  * rewrites.
  */
-(function() {
+(async function() {
     // Guard variable
     if (window.has_run) {
         return
@@ -26,17 +26,16 @@
 
     // Ok, lets go ahead
     let wiki_api = new WikiApi()
-    wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2], production_info => {
-        if (production_info != null) {
-            document.getElementById("wpTextbox1").textContent = modifyText(production_info["wikitext"])
-            document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
+    let production_info = await wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2])
+    if (production_info != null) {
+        document.getElementById("wpTextbox1").textContent = modifyText(production_info["wikitext"])
+        document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
 
-            // Submit, so people aren't tempted to start editing right away
-            document.getElementById("editform").submit()
-        } else {
-            console.log("Couldn't fetch wikitext from production page")
-        }
-    })
+        // Submit, so people aren't tempted to start editing right away
+        // document.getElementById("editform").submit()
+    } else {
+        console.log("Couldn't fetch wikitext from production page")
+    }
 
     function modifyText(orig) {
         // We modify links to "Vprepub", because that's what we probably want to link to

@@ -1,4 +1,4 @@
-(function() {
+(async function() {
     // Guard variable
     if (window.has_run) {
         return;
@@ -12,74 +12,69 @@
     let wiki_api = new WikiApi()
 
     // Containers for the issue page information in the original and the modified state
-    let ancestor_info = null
     let issue_info    = null
+    let ancestor_info = null
 
     // The textarea of the editor component
     let textarea = document.getElementById("wpTextbox1")
 
-    // The original wikitext of this page
+    // The original wikitext of this (prepub) page
     const orig_wikitext = textarea.textContent
 
-    // The MedMij namespace id
-    let namespace_id = -1
+    // The namespace id for the MedMij namespace
+    let namespace_id = await getMedMijNamespace()
 
-    // Because we're using (required) asynchronous API calls, the rest of the
-    // process is a web of callbacks. Let's kickstart the process bu getting
-    // the MedMij namespace
-    wiki_api.query({"meta": "siteinfo", "siprop": "namespaces"}, ns_info => {
+    // Find the issues associated with this page and populate a dropdown list.
+    // Further page actions are driven by user interactions with this dropdown.
+    if (namespace_id != -1) {
+        let issue_ids = await extractIssueIdsFromSiteInfo()
+        populateIssues(issue_ids)
+    }
+
+    /** Retrieve the MedMij namespace using the API */
+    async function getMedMijNamespace() {
+        let ns_info = await wiki_api.query({"meta": "siteinfo", "siprop": "namespaces"})
         if (ns_info != null) {
             for (let ns_id in ns_info.namespaces) {
                 if (ns_info.namespaces[ns_id].canonical == "MedMij") {
-                    namespace_id = ns_id
-                    break
+                    return ns_id
                 }
             }
         }
 
-        // If we know the namespace, the next step is to search for issue pages
-        if (namespace_id != -1) {
-            extractIssueIdsFromSiteInfo()
-        } else {
-            console.log("Couldn't get the MedMij namespace id")
-        }
-    })
+        return -1
+    }
 
     /**
      * Find all issues we can integrate here by searching for issue pages
      * with the same title.
      */
-    function extractIssueIdsFromSiteInfo() {
+    async function extractIssueIdsFromSiteInfo() {
         let issue_ids = []
 
         // Inspect all pages starting with Vissue in this namespace
-        wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500}, info => {
-            if (info != null) {
-                // In the URL, spaces are replaced by underscores, so to get
-                // the title, we have, to replace them
-                let naked_page_title = url_parts[2].replace(new RegExp("_", "g"), " ")
-                for (let key in info.prefixsearch) {
-                    // If the end of the title matches the end of _our_ title,
-                    // extract the issue number from the title and store it.
-                    let issue = info.prefixsearch[key]
-                    if (issue.title.endsWith(naked_page_title)) {
-                        let title_parts = /MedMij:Vissue-(.*?)\//.exec(issue.title)
-                        if (title_parts != null && title_parts.length > 1) {
-                            issue_ids.push(title_parts[1])
-                        } else {
-                            console.log("Couldn't extract issue num from '" + issue.title + "'")
-                        }
+        let info = await wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500})
+        if (info != null) {
+            // In the URL, spaces are replaced by underscores, so to get the
+            // title, we have, to replace them
+            let naked_page_title = url_parts[2].replace(new RegExp("_", "g"), " ")
+            for (let key in info.prefixsearch) {
+                // If the end of the title matches the end of _our_ title,
+                // extract the issue number from the title and store it.
+                let issue = info.prefixsearch[key]
+                if (issue.title.endsWith(naked_page_title)) {
+                    let title_parts = /MedMij:Vissue-(.*?)\//.exec(issue.title)
+                    if (title_parts != null && title_parts.length > 1) {
+                        issue_ids.push(title_parts[1])
+                    } else {
+                        console.log("Couldn't extract issue num from '" + issue.title + "'")
                     }
                 }
-
-                // Next in line is to add a dropdown with the issue id's to the
-                // page. This concludes the modification of the page, the next
-                // action is triggered when the user selects an issue.
-                populateIssues(issue_ids)
-            } else {
-                console.log("Couldn't query the pages in the MedMij namespace")
             }
-        })
+        } else {
+            console.log("Couldn't query the pages in the MedMij namespace")
+        }
+        return issue_ids
     }
 
     /**
@@ -112,7 +107,11 @@
                     restoreEditor()
                 } else {
                     textarea.setAttribute("style", "color: grey");            
-                    getWikiTextForIssue(value)
+                    getWikiAndAncestorTextForIssue(value).then(() => {
+                        if (issue_info != null && ancestor_info != null) {
+                            autoMerge()
+                        }
+                    })
                 }
             }
             
@@ -141,6 +140,7 @@
         }
     }
 
+    /** Restore the editor area to its initial state */
     function restoreEditor() {
         let editor = document.getElementsByClassName("wikiEditor-ui-view-wikitext")[0] // The entire editor component
         editor.childNodes.forEach(child => child.style.display = "block")
@@ -156,42 +156,32 @@
 
     /** Get the issue text for the selected issue in the issue box, plus the
      *  common ancestor for these pages. */
-    function getWikiTextForIssue(issue_id) {
+    async function getWikiAndAncestorTextForIssue(issue_id) {
         issue_info    = null
         ancestor_info = null // We could reuse a previous answer, but for now lets not make it too complex
-        wiki_api.getWikiText("page=MedMij:Vissue-" + issue_id + "/" + url_parts[2], response => {
-            issue_info = response // Save for the next function
-            if (issue_info != null) {
-                // The issue box will differ between the issue and the prepub page,
-                // so lets convert it already
-                issue_info.wikitext = changeIssueBoxToPrepub(issue_info.wikitext)
+        issue_info = await wiki_api.getWikiText("page=MedMij:Vissue-" + issue_id + "/" + url_parts[2])
+        if (issue_info != null) {
+            // The issue box will differ between the issue and the prepub page,
+            // so lets convert it already
+            issue_info.wikitext = changeIssueBoxToPrepub(issue_info.wikitext)
 
-                // Now reconstruct the common ancestor by going back to the
-                // first revision.
-                wiki_api.getPageRevisions(issue_info["pageid"], issue_revisions => {
-                    if (issue_revisions != null) {
-                       let first_revision = issue_revisions[issue_revisions.length - 1].revid
-                        wiki_api.getWikiText("oldid=" + first_revision, response => {
-                            ancestor_info = response // Save for the next function
-
-                            if (ancestor_info != null) {
-                                if (url_parts[1] === "Vprepub/") {
-                                    ancestor_info.wikitext = changeIssueBoxToPrepub(ancestor_info.wikitext)
-                                } else {
-                                    // Temporary, I hope, to allow for merging to V2019.01
-                                    ancestor_info.wikitext = ancestor_info.wikitext.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
-                                }
-
-                                // Now that we have the issue text plus common
-                                // ancestor, it's to to see if we can merge the
-                                // two.
-                                autoMerge()
-                            }
-                        })
+            // Now reconstruct the common ancestor by going back to the
+            // first revision.
+            let issue_revisions = await wiki_api.getPageRevisions(issue_info["pageid"])
+            if (issue_revisions != null) {
+                let first_revision = issue_revisions[issue_revisions.length - 1].revid
+                ancestor_info = await wiki_api.getWikiText("oldid=" + first_revision)
+                if (ancestor_info != null) {
+                    if (url_parts[1] === "Vprepub/") {
+                        ancestor_info.wikitext = changeIssueBoxToPrepub(ancestor_info.wikitext)
+                    } else {
+                        // Temporary, I hope, to allow for merging to V2019.01
+                        ancestor_info.wikitext = ancestor_info.wikitext.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
                     }
-                })
+                }
+
             }
-        })
+        }
     }
 
     /**
