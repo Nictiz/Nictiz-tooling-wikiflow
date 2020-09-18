@@ -2,20 +2,25 @@
     "manifest_version": 2,
     "name": "WikiFlow",
     "author": "Pieter Edelman",
-    "version": "0.3.0",
-    "description": "Some automation for the new Wiki workflow during the summer release",
+    "version": "0.4.1",
+    "description": "Some automation for the Wiki workflow",
   
     "content_scripts": [
         {
-            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vissue-*&action=edit"],
+            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vissue-*&action=edit*"],
             "js": ["wiki_api.js", "populate_issue.js"]
         },
         {
-            "matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:V2019.01*"],
+            "matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:V2019.01*", "*://informatiestandaarden.nictiz.nl/wiki/MedMij:V2020.01*"],
             "js": ["create_new_issue.js"]
         },
         {
             "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vprepub/*&action=edit"],
+            "js": ["wiki_api.js", "diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
+            "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css"]
+        },
+        {
+            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:V2019.01_*&action=edit"],
             "js": ["wiki_api.js", "diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css"]
         }

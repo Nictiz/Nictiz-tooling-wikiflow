@@ -10,21 +10,29 @@
     }
     window.has_run = true
 
-    let Vcurrent = "V2019.01"
-
     // Parse the URL and check if this is a newly created issue page
-    let url_parts = /.*index.php\?title=MedMij:Vissue-(.*?)(_.*?)(&.*)?&action=edit/.exec(window.location.href)
+    let url_parts = /.*index.php\?title=MedMij:Vissue-(.*?)([_\/].*?)(&.*)?&action=edit(&.+)?/.exec(window.location.href)
     if (url_parts != null) {
         let heading = document.getElementById("firstHeading")
-        if (!(heading && heading.textContent.startsWith("Bezig met het aanmaken van"))) return
+        if (!(heading && (heading.textContent.startsWith("Bezig met het aanmaken van") || heading.textContent.startsWith("Creating")))) return
+    }
+
+    // Figure out which page to branch off using the "source" parameter
+    let Vcurrent = "V2020.01"
+    let search_params = new URL(window.location.href).searchParams
+    if (search_params.has("source")) {
+        Vcurrent = search_params.get("source")
     }
 
     // Ok, lets go ahead
     let wiki_api = new WikiApi()
-    wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2], function(production_info) {
+    wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2], production_info => {
         if (production_info != null) {
             document.getElementById("wpTextbox1").textContent = modifyText(production_info["wikitext"])
             document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
+
+            // Submit, so people aren't tempted to start editing right away
+            document.getElementById("editform").submit()
         } else {
             console.log("Couldn't fetch wikitext from production page")
         }
@@ -38,8 +46,8 @@
         modified = "__NOINDEX__\n" + modified
 
         // Modify the issuebox to link to the issue in BITS
-        modified = modified.replace("{{MedMij:Vprepub_Issuebox}}", "{{MedMij:Vissue_Issuebox|" + url_parts[1] + "}}") // FO
-        modified = modified.replace("{{MedMij:Vprepub_Issuebox_FHIR_IG}}", "{{MedMij:Vissue_Issuebox_FHIR_IG|" + url_parts[1] + "}}") // TO
+        modified = modified.replace(/{{MedMij:Vprepub(_|\/)Issuebox}}/, "{{MedMij:Vissue$1Issuebox|" + url_parts[1] + "}}") // FO
+        modified = modified.replace(/{{MedMij:Vprepub(_|\/)Issuebox_FHIR_IG}}/, "{{MedMij:Vissue$1Issuebox_FHIR_IG|" + url_parts[1] + "}}") // TO
 
         return modified
     }

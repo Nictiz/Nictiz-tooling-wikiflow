@@ -6,7 +6,7 @@
     window.has_run = true;
 
     // Parse the url to see which page we're on
-    let url_parts = /index.php\?title=MedMij:Vprepub\/(.*?)(&*)?&action=edit/.exec(window.location.href)
+    let url_parts = /index.php\?title=MedMij:(Vprepub\/|V2019.01_)(.*?)(&*)?&action=edit/.exec(window.location.href)
     if (url_parts == null) return
 
     let wiki_api = new WikiApi()
@@ -57,13 +57,13 @@
             if (info != null) {
                 // In the URL, spaces are replaced by underscores, so to get
                 // the title, we have, to replace them
-                let naked_page_title = url_parts[1].replace(new RegExp("_", "g"), " ")
+                let naked_page_title = url_parts[2].replace(new RegExp("_", "g"), " ")
                 for (let key in info.prefixsearch) {
                     // If the end of the title matches the end of _our_ title,
                     // extract the issue number from the title and store it.
                     let issue = info.prefixsearch[key]
                     if (issue.title.endsWith(naked_page_title)) {
-                        let title_parts = /MedMij:Vissue-(.*?) /.exec(issue.title)
+                        let title_parts = /MedMij:Vissue-(.*?)\//.exec(issue.title)
                         if (title_parts != null && title_parts.length > 1) {
                             issue_ids.push(title_parts[1])
                         } else {
@@ -159,33 +159,35 @@
     function getWikiTextForIssue(issue_id) {
         issue_info    = null
         ancestor_info = null // We could reuse a previous answer, but for now lets not make it too complex
-        wiki_api.getWikiText("page=MedMij:Vissue-" + issue_id + "_" + url_parts[1], response => {
+        wiki_api.getWikiText("page=MedMij:Vissue-" + issue_id + "/" + url_parts[2], response => {
             issue_info = response // Save for the next function
             if (issue_info != null) {
                 // The issue box will differ between the issue and the prepub page,
                 // so lets convert it already
                 issue_info.wikitext = changeIssueBoxToPrepub(issue_info.wikitext)
 
-                // All links were Vprepub_, but should now be Vprepub/
-                issue_info.wikitext = issue_info.wikitext.replace(new RegExp("Vprepub_", "g"), "Vprepub/")
+                // Now reconstruct the common ancestor by going back to the
+                // first revision.
+                wiki_api.getPageRevisions(issue_info["pageid"], issue_revisions => {
+                    if (issue_revisions != null) {
+                       let first_revision = issue_revisions[issue_revisions.length - 1].revid
+                        wiki_api.getWikiText("oldid=" + first_revision, response => {
+                            ancestor_info = response // Save for the next function
 
-                // Now reconstruct the common ancestor from the production page
-                wiki_api.getWikiText("page=MedMij:V2019.01_" + url_parts[1], response => {
-                    ancestor_info = response // Save for the next function
+                            if (ancestor_info != null) {
+                                if (url_parts[1] === "Vprepub/") {
+                                    ancestor_info.wikitext = changeIssueBoxToPrepub(ancestor_info.wikitext)
+                                } else {
+                                    // Temporary, I hope, to allow for merging to V2019.01
+                                    ancestor_info.wikitext = ancestor_info.wikitext.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
+                                }
 
-                    if (ancestor_info != null) {
-                        // We modify links to "Vprepub", because that's what we probably want to link to
-                        let modified = ancestor_info.wikitext.replace(new RegExp("V2019.01_", "g"), "Vprepub/")
-        
-                        // Inject __NOINDEX__
-                        modified = "__NOINDEX__\n" + modified
-
-                        ancestor_info.wikitext = changeIssueBoxToPrepub(modified)
-
-                        // Now that we have the issue text plus common
-                        // ancestor, it's to to see if we can merge the
-                        // two.
-                        autoMerge()
+                                // Now that we have the issue text plus common
+                                // ancestor, it's to to see if we can merge the
+                                // two.
+                                autoMerge()
+                            }
+                        })
                     }
                 })
             }
@@ -282,7 +284,7 @@
     }
 
     function changeIssueBoxToPrepub(text) {
-        return text.replace(/{{MedMij:Vissue_Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
+        return text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
     }
 
 })()
