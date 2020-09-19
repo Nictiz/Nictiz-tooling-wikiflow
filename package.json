@@ -1,0 +1,15 @@
+{
+  "name": "wikiflow",
+  "version": "0.4.1",
+  "description": "Some automation for the Wiki workflow",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build-extension": "npx tsc -p tsconfig.extension.json"
+  },
+  "author": "Pieter Edelman",
+  "devDependencies": {
+    "typescript": "^4.0.0"
+  }
+}
