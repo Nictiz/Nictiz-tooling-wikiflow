@@ -17,6 +17,25 @@
         if (!(heading && (heading.textContent.startsWith("Bezig met het aanmaken van") || heading.textContent.startsWith("Creating")))) return
     }
 
+    // Make the page inaccessible while its populated and saved
+    let grayout = document.createElement("div")
+    grayout.style.position = "fixed"
+    grayout.style.left = "0px"
+    grayout.style.right = "0px"
+    grayout.style.width = "100%"
+    grayout.style.height = "100%"
+    grayout.style.backgroundColor = "black"
+    grayout.style.opacity = "0.75"
+    grayout.style.zIndex = "99999"
+    let wait = document.createElement("p")
+    wait.innerHTML = "Please wait ..."
+    wait.style.fontSize = "500%"
+    wait.style.width = "100%"
+    wait.style.textAlign = "center"
+    wait.style.color = "white"
+    grayout.appendChild(wait)
+    document.getElementsByTagName("html")[0].insertAdjacentElement("afterbegin", grayout)
+
     // Figure out which page to branch off using the "source" parameter
     let Vcurrent = "V2020.01"
     let search_params = new URL(window.location.href).searchParams
@@ -29,10 +48,10 @@
     let production_info = await wiki_api.getWikiText("page=MedMij:" + Vcurrent + url_parts[2])
     if (production_info != null) {
         document.getElementById("wpTextbox1").textContent = modifyText(production_info["wikitext"])
-        document.getElementById("wpSummary").setAttribute("value", "Clone of production page for issue " + url_parts[1])
+        document.getElementById("wpSummary").setAttribute("value", "Clone of " + Vcurrent + " production page for issue " + url_parts[1])
 
         // Submit, so people aren't tempted to start editing right away
-        // document.getElementById("editform").submit()
+        document.getElementById("editform").submit()
     } else {
         console.log("Couldn't fetch wikitext from production page")
     }
