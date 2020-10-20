@@ -25,6 +25,23 @@
     let merged_text   = ""    // The text after merging
     let has_conflicts = false // Do we have merge conflicts?
 
+    // Let's add some input validation to the form submission
+    document.getElementById("editform").addEventListener("submit", (event) => {
+        let summary = document.getElementById("wpSummary").value
+        if (issue_id != null) {
+            let proceed = true
+            if (summary.length < 10) {
+                proceed = confirm("De samenvatting is erg kort. Weet je zeker dat je wil doorgaan?")
+            } else if (!summary.startsWith(issue_id)) {
+                proceed = confirm("De samenvatting begint niet met het issue-nummer. Weet je zeker dat je wil doorgaan?")
+            }
+            if (!proceed) {
+                event.preventDefault()
+                return
+            }
+        }
+    })
+
     // The namespace id for the MedMij namespace
     let namespace_id = await getMedMijNamespace()
 
