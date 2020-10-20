@@ -177,6 +177,13 @@
 
             let heading = document.getElementById("firstHeading")
             heading.insertAdjacentElement("afterend", div)
+
+            // If the "merge_issue" parameter is given, select the specified issue
+            let params = new URLSearchParams(window.location.href)
+            if (params.has("merge_issue")) {
+                dropdown.querySelector("option[value='" + params.get("merge_issue") + "']").selected = true
+                dropdown.onchange()
+            }
         }
     }
 
