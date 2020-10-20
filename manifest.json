@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "WikiFlow",
     "author": "Pieter Edelman",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "description": "Some automation for the Wiki workflow",
   
     "content_scripts": [
@@ -24,5 +24,11 @@
             "js": ["wiki_api.js", "diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css"]
         }
-    ]
+    ],
+
+    "browser_specific_settings": {
+        "gecko": {
+            "update_url": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/dist/updates.json"
+        }
+    }
 }
