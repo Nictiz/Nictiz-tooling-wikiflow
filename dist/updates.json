@@ -1,0 +1,12 @@
+{
+    "addons": {
+        "{b3619e4e-b824-424f-9b67-035f1f90b403}": {
+            "updates": [
+                {
+                    "version": "0.4.1",
+                    "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.4.1/wikiflow-0.4.1-fx.xpi"
+                }
+            ]
+        }
+    }
+}
