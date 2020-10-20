@@ -15,7 +15,7 @@
             "js": ["create_new_issue.js"]
         },
         {
-            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vprepub/*&action=edit&*", "*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:V2019.01_*&action=edit&*"],
+            "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vprepub/*&action=edit*", "*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:V2019.01_*&action=edit*"],
             "js": ["wiki_api.js", "diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css", "diff_issue.css"]
         },
