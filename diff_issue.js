@@ -21,6 +21,10 @@
     // The original wikitext of this (prepub) page
     const orig_wikitext = textarea.textContent
 
+    let issue_id     = null   // The issue we're currently merging
+    let merged_text   = ""    // The text after merging
+    let has_conflicts = false // Do we have merge conflicts?
+
     // The namespace id for the MedMij namespace
     let namespace_id = await getMedMijNamespace()
 
@@ -101,19 +105,6 @@
                 option.innerHTML = issue_id
                 dropdown.appendChild(option)
             })
-            dropdown.onchange = function() {
-                let value = this.selectedOptions[0].value
-                if (value == "none") {
-                    restoreEditor()
-                } else {
-                    textarea.setAttribute("style", "color: grey");            
-                    getWikiAndAncestorTextForIssue(value).then(() => {
-                        if (issue_info != null && ancestor_info != null) {
-                            autoMerge()
-                        }
-                    })
-                }
-            }
             
             let label = document.createElement("label")
             label.setAttribute("for", "issue_dropdown")
@@ -127,24 +118,77 @@
             let threeway_check = document.createElement("input")
             threeway_check.setAttribute("type", "checkbox")
             threeway_check.setAttribute("id", "threeway_check")
+            threeway_check.onchange = function() {
+                if (issue_id != null) {
+                    if (threeway_check.checked) {
+                        loadDiffEditor(merged_text)
+                    } else if (!has_conflicts) {
+                        restoreEditor(null)
+                    }
+                }
+            }
 
             let threeway_label = document.createElement("label")
-            threeway_label.setAttribute("for", "threeway_checkbox")
-            threeway_label.innerHTML = "Gebruik altijd de diff-tool"
+            threeway_label.setAttribute("for", "threeway_check")
+            threeway_label.innerHTML = "Gebruik de diff-tool"
 
             div.appendChild(threeway_check)
             div.appendChild(threeway_label)
+
+            dropdown.onchange = function() {
+                let value = this.selectedOptions[0].value
+                if (value == "none") {
+                    // Reset everything to the original state
+                    issue_id      = null
+                    merged_text   = ""
+                    has_conflicts = false
+                    threeway_check.disabled = false
+                    threeway_label.style.color = "black"
+                    restoreEditor(orig_wikitext)
+                } else {
+                    issue_id = value
+                    textarea.setAttribute("style", "color: grey");            
+                    getWikiAndAncestorTextForIssue(value).then(() => {
+                        if (issue_info != null && ancestor_info != null) {
+                            autoMerge()
+
+                            // Enable/disable the "use diff" button
+                            if (has_conflicts) {
+                                threeway_check.disabled = true
+                                threeway_label.style.color = "gray"
+                            } else {
+                                threeway_check.disabled = false
+                                threeway_label.style.color = "black"
+                            }
+
+                            if (has_conflicts || document.getElementById("threeway_check").checked) {
+                                // If we have conflicts, load the three way diff to manually resolve 
+                                // them, with as much already merged as possible
+                                loadDiffEditor(merged_text)
+                            } else {
+                                // Otherwise, load the new text to the editor
+                                restoreEditor(merged_text)
+                            }
+                    
+                        }
+                    })
+                }
+            }
 
             let heading = document.getElementById("firstHeading")
             heading.insertAdjacentElement("afterend", div)
         }
     }
 
-    /** Restore the editor area to its initial state */
-    function restoreEditor() {
+    /** Restore the editor area to its initial state.
+     *  @param new_text an optional parameter to fill the textare with
+     */
+    function restoreEditor(new_text) {
         let editor = document.getElementsByClassName("wikiEditor-ui-view-wikitext")[0] // The entire editor component
         editor.childNodes.forEach(child => child.style.display = "block")
-        textarea.textContent = orig_wikitext
+        if (new_text != null) {
+            textarea.textContent = new_text
+        }
         for (let element of document.getElementsByClassName("CodeMirror-merge")) {
             element.remove()
         }
@@ -186,9 +230,8 @@
 
     /**
      * Try to automatically merge the text from the issue page and the text on
-     * this page, given the common ancestor.
-     * On success, the editor will be replaced by the merged text. On failure,
-     * a manual three-way merge editor will be opened.
+     * this page, given the common ancestor. This will set the fields merged_text
+     * and has_conflicts
      */
     function autoMerge() {
         // We use the node-diff library, which seems the only working solution
@@ -204,28 +247,18 @@
             stringSeparator: /\n/
         })
 
-        let has_conflicts = false
-        let merged = ""
+        has_conflicts = false
+        merged_text = ""
         changes.forEach(change => {
             if ("conflict" in change) {
                 has_conflicts = true
                 // Add the original text to the merged text
-                change.conflict.o.forEach(chunk => merged += chunk + "\n")
+                change.conflict.o.forEach(chunk => merged_text += chunk + "\n")
             } else {
                 // Add the hunk to the merged text
-                change.ok.forEach(chunk => merged += chunk + "\n")
+                change.ok.forEach(chunk => merged_text += chunk + "\n")
             }
         })
-
-        if (has_conflicts || document.getElementById("threeway_check").checked) {
-            // If we have conflicts, load a three way diff to manually resolve 
-            // them, with as much already merged as possible
-            loadDiffEditor(merged)
-        } else {
-            // Otherwise, load the new text to the editor
-            restoreEditor()
-            textarea.textContent = merged
-        }
     }
 
     /**
