@@ -5,6 +5,14 @@
                 {
                     "version": "0.4.1",
                     "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.4.1/wikiflow-0.4.1-fx.xpi"
+                },
+                {
+                    "version": "0.5.2",
+                    "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.5.2/wikiflow-0.5.2-fx.xpi"
+                },
+                {
+                    "version": "0.5.3",
+                    "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.5.3/wikiflow-0.5.3-fx.xpi"
                 }
             ]
         }
