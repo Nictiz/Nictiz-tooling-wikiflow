@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "WikiFlow",
     "author": "Pieter Edelman",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "Some automation for the Wiki workflow",
   
     "content_scripts": [
