@@ -1,10 +1,18 @@
 /** 
  * Interact with the wiki API.
  *  
- * WARNING: Contains magic variables for the  Informatiestandaarden wiki.
+ * WARNING: Contains some assumptions about the Informatiestandaarden wiki.
  */
 function WikiApi() {
-    this.base_url = "https://informatiestandaarden.nictiz.nl/api.php"
+    // Construct the url for the API calls, which is assumed to be "/api.php"
+    // directly on the host name
+    this.getApiURL = function() {
+        let url = new URL(window.location.href)
+        url.pathname = "api.php"
+        url.search   = ""
+        return url.toString()        
+    }
+    const api_url = this.getApiURL()
 
     /** 
      * Query the wikitext content for a given page.
@@ -19,7 +27,7 @@ function WikiApi() {
      */
     this.getWikiText = async function(query_key) {
         // Start a synchronous request, interpreting the result as JSON
-        let url = this.base_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key
+        let url = api_url + "?action=parse&prop=wikitext|revid&format=json&" + query_key
         let response = await fetch(url)
         if (response.ok) {
             try {
@@ -48,7 +56,7 @@ function WikiApi() {
      */
     this.getPageRevisions = async function(page_id) {
         // Start the synchronous request, interpreting the result as JSON
-        let url = this.base_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
+        let url = api_url + "?action=query&prop=revisions&format=json&rvlimit=500&pageids=" + page_id
         let response = await fetch(url)
         if (response.ok) {
             let json = await response.json()
@@ -66,7 +74,7 @@ function WikiApi() {
      *        On error, null is returned
      */
     this.query = async function(parameters) {
-        let url = this.base_url + "?action=query&format=json"
+        let url = api_url + "?action=query&format=json"
         for (let key in parameters) {
             url += "&" + encodeURI(key) + "=" + encodeURI(parameters[key])
         }
