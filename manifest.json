@@ -4,7 +4,11 @@
     "author": "Pieter Edelman",
     "version": "0.5.4",
     "description": "Some automation for the Wiki workflow",
-  
+
+    "background": {
+        "scripts": ["background.js"]
+    },
+
     "content_scripts": [
         {
             "matches": ["*://informatiestandaarden.nictiz.nl/index.php?title=MedMij:Vissue-*&action=edit*"],
@@ -22,8 +26,18 @@
         {
             "matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:Vissue*"],
             "js": ["merge_issue.js"]
+        },
+        {
+            "matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:Vprepub*", "*://informatiestandaarden.test-nictiz.nl/wiki/MedMij:Vprepub*"],
+            "js": ["wiki_api.js", "switch_pages.js"]
         }
     ],
+
+    "page_action": {
+        "browser_style": true,
+        "default_title": "Publiceer",
+        "show_matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:Vprepub*", "*://informatiestandaarden.test-nictiz.nl/wiki/MedMij:Vprepub*"]
+    },
 
     "browser_specific_settings": {
         "gecko": {
