@@ -10,9 +10,9 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (message.type == "wikiQuery") {
         return wiki_api.query(message.payload)
     } else if (message.type == "wikiDeletePage") {
-        return wiki_api.deletePage(message.page_id, message.token)
+        return wiki_api.deletePage(message.page_id)
     } else if (message.type == "wikiMovePage") {
-        return wiki_api.movePage(message.page_id, message.new_title, message.token)
+        return wiki_api.movePage(message.page_id, message.new_title)
     }
 })
   
