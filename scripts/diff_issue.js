@@ -231,7 +231,7 @@
         if (issue_info != null) {
             // The issue box will differ between the issue and the prepub page,
             // so lets convert it already
-            issue_info.wikitext = changeIssueBoxToPrepub(issue_info.wikitext)
+            issue_info.wikitext = rewriteText(issue_info.wikitext)
 
             // Now reconstruct the common ancestor by going back to the
             // first revision.
@@ -241,7 +241,7 @@
                 ancestor_info = await wiki_api.getWikiText("oldid=" + first_revision)
                 if (ancestor_info != null) {
                     if (url_parts[1] === "Vprepub/") {
-                        ancestor_info.wikitext = changeIssueBoxToPrepub(ancestor_info.wikitext)
+                        ancestor_info.wikitext = rewriteText(ancestor_info.wikitext)
                     } else {
                         // Temporary, I hope, to allow for merging to V2019.01
                         ancestor_info.wikitext = ancestor_info.wikitext.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
@@ -330,8 +330,21 @@
         }
     }
 
-    function changeIssueBoxToPrepub(text) {
-        return text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
+    /**
+     * Rewrite the wiki text so that all references specific to the issue are
+     * changed to Vprepub.
+     * @param text the raw wikitext to rewrite
+     * @returns the rewritten wikitext
+     */
+    function rewriteText(text) {
+        // Change the issuebox from the Vissue back to the Vprepub version
+        let modified = text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
+
+        // Change links and transclusions back to Vprepub
+        let rewriter = new PrefixRewriter("MedMij:Vissue-[A-Za-z0-9\-\.]+", "Vprepub", true)
+        modified = rewriter.rewrite(modified)
+
+        return modified
     }
 
 })()

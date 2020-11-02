@@ -27,7 +27,7 @@
         {
             "matches": ["*://*.nl/index.php?title=MedMij:Vprepub/*&action=edit*", "*://*.nl/index.php?title=MedMij:V2019.01_*&action=edit*"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/wiki_api.js", "scripts/diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
+            "js": ["scripts/wiki_api.js", "scripts/prefix_rewriter.js", "scripts/diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css", "css/diff_issue.css"]
         },
         {
