@@ -19,9 +19,11 @@
     // When the search button is clicked, search for all live and temp pages 
     // using the prefixes specified by the user.
     document.getElementById("button_search").addEventListener("click", (event) => {
+        // Reset everything
         document.getElementById("error").style.visibility = "hidden"
         let div = document.getElementById("pairs")
         div.innerHTML = "<table id='pairs_table'></table>"
+        document.getElementById("button_switch").setAttribute("disabled", "disabled")
     
         migrater.collectPages(document.getElementById("prefix_live").value, document.getElementById("prefix_temp").value).then(() => {
             // Enable the migrate button if there are is at least one temp page

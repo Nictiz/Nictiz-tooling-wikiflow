@@ -18,7 +18,7 @@ function WikiApi() {
      * Operations that change content require a csrf token. This field is set 
      * using the retrieveToken() method.
      */
-    let token = null
+    this.token = null
 
     /** 
      * Query the wikitext content for a given page.
@@ -71,6 +71,10 @@ function WikiApi() {
         return null
     }
 
+    // Cache the Promise to query the token to make sure there's just a single
+    // request.
+    this.token_querying = null
+
     /**
      * Query the csrf token and set it to the "token" variable. This token is 
      * needed for operations that change content on the wiki. A token can only
@@ -82,15 +86,17 @@ function WikiApi() {
      * @returns true when the token parameter is set or false on failure
      */
     this.retrieveToken = async function() {
-        if (token != null) return true
+        if (this.token_querying !== null) await this.token_querying // Make sure we don't start a new token request if the previous one is running
+        if (this.token !== null) return true
 
-        let tokens = await this.query({"meta": "tokens", "type": "csrf"})
-        if (tokens != null && "tokens" in tokens && "csrftoken" in tokens["tokens"]) {
-            token = tokens["tokens"]["csrftoken"]
-            return true
-        }
+        this.token_querying = this.query({"meta": "tokens", "type": "csrf"}).then(tokens => {
+            if (tokens != null && "tokens" in tokens && "csrftoken" in tokens["tokens"]) {
+                this.token = tokens["tokens"]["csrftoken"]
+            }   
+        })
+        await this.token_querying
         
-        return false
+        return (this.token !== null)
     }
 
     /**
@@ -106,7 +112,7 @@ function WikiApi() {
             "action": "delete",
             "format": "json",
             "pageid": page_id,
-            "token": token
+            "token": this.token
         })
 
         if (response.ok) {
@@ -135,7 +141,7 @@ function WikiApi() {
             "fromid": page_id,
             "to": new_title,
             "noredirect": true,
-            "token": token
+            "token": this.token
         })
 
         if (response.ok) {

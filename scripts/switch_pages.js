@@ -4,9 +4,11 @@
  * context of the webpage in order to avoid CORS problems.
  * The other two files are the background script and the page UI script.
  */
+wiki_api = null
 browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    let wiki_api = new WikiApi()
-
+    if (wiki_api === null) {
+        wiki_api = new WikiApi()
+    }
     if (message.type == "wikiQuery") {
         return wiki_api.query(message.payload)
     } else if (message.type == "wikiDeletePage") {
