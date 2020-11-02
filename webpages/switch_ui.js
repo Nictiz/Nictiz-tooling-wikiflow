@@ -7,11 +7,12 @@
  * script running on a wiki page to perform the wiki api operations in the
  * proper context, which is set in the background script. 
  */
+
 (async function() {
     // Get the id of the tab where the content script runs (as a global 
     // variable)
     let background_page = await browser.runtime.getBackgroundPage()
-    var script_tab = background_page.script_tab_id
+    script_tab = background_page.script_tab_id
 
     let migrater = new Migrater()
 
@@ -19,7 +20,8 @@
     // using the prefixes specified by the user.
     document.getElementById("button_search").addEventListener("click", (event) => {
         document.getElementById("error").style.visibility = "hidden"
-        document.getElementById("pages").innerHTML = ""
+        let div = document.getElementById("pairs")
+        div.innerHTML = "<table id='pairs_table'></table>"
     
         migrater.collectPages(document.getElementById("prefix_live").value, document.getElementById("prefix_temp").value).then(() => {
             // Enable the migrate button if there are is at least one temp page
@@ -31,33 +33,39 @@
             }
 
             // Show all pages that will be migrated, published and deleted
-            let div = document.getElementById("pages")
-            let list = document.createElement("ul")
+            let table = document.getElementById("pairs_table")
             migrater.pairs.forEach(pair => {
-                let li = document.createElement("li")
-                li.innerHTML = pair.render()
-                list.appendChild(li)
+                let tr = document.createElement("tr")
+                tr.innerHTML = "<td><input type='checkbox' checked></td><td>" + pair.render().join("</td><td>") + "</td>"
+                table.appendChild(tr)
             })
-            div.appendChild(list)
             div.style.visibility = "initial"
         }).catch(error => {
             showError(error)
         })
-        event.preventDefault()
     })
 
     // When the switch button is clicked, delete all live pages and rename all
     // temp pages using the live prefix.
     document.getElementById("button_switch").addEventListener("click", async function(event) {
         document.getElementById("error").style.visibility = "hidden"
-        migrater.switchPages((index, is_successful, message) => {
-            let li = document.getElementById("pages").getElementsByTagName("li")[index]
-            li.innerHTML = message
-            if (is_successful) { 
-                li.style.color = "green"
+        
+        // Construct a list of indexes which should be included/excluded
+        let active_index = []
+        let rows = document.getElementById("pairs_table").getElementsByTagName("tr")
+        for (i = 0; i < rows.length; i++) {
+            if (rows[i].querySelector("input[type='checkbox']:checked") === null) {
+                active_index.push(false)
             } else {
-                li.style.color = "red"
+                active_index.push(true)
             }
+        }
+
+        // Perform the migration
+        migrater.switchPages(active_index, (index, is_successful, message) => {
+            let tr = document.getElementById("pairs_table").getElementsByTagName("tr")[index]
+            tr.innerHTML = "<td></td><td>" + message.join("</td><td>") + "</td>"
+            tr.className = is_successful ? "success" : "failure"
         })
     })
     
@@ -75,7 +83,7 @@
 /**
  * The main functionality for searching and switching pages.
  */
-function Migrater(script_tab) {
+function Migrater() {
     this.live_prefix = ""
     this.temp_prefix = ""
 
@@ -161,17 +169,21 @@ function Migrater(script_tab) {
     /**
      * Switch the temp pages to live pages (or publish temp pages and delete
      * live pages, when pairs aren't matched).
+     * @param active_indexes an array with booleans to indicate for each index
+     *                       whether the switch should be made.
      * @param callback a callback function which takes the index, the status
      *                 and the message of the pair switch.
      */
-    this.switchPages = async function(callback) {
+    this.switchPages = async function(active_indexes, callback) {
         for (let i = 0; i < this.pairs.length; i++) {
-            let pair = this.pairs[i]
-            pair.switch(this.script_tab).then(() => {
-                callback(i, true, pair.render())
-            }).catch(err => {
-                callback(i, false, pair.render())
-            })
+            if (active_indexes[i]) {
+                let pair = this.pairs[i]
+                pair.switch(this.script_tab).then(() => {
+                    callback(i, true, pair.render())
+                }).catch(err => {
+                    callback(i, false, pair.render())
+                })
+            }
         }
     }
 }
@@ -203,36 +215,36 @@ function Pair(live_id, temp_id, naked_title, live_prefix, temp_prefix) {
         if (this.live_id !== null) {
             let deleted = await browser.tabs.sendMessage(script_tab, {"type": "wikiDeletePage", "page_id": this.live_id})
             if (deleted === false) {
-                this.status_message = this.live_prefix + this.naked_title + " kan niet verwijderd worden."
-                return Promise.reject(Error(this.status_message))
+                this.status_message = ["", "kan niet verwijderd worden:", this.live_prefix + this.naked_title]
+                return Promise.reject(Error(this.status_message.join(" ")))
             }
-            this.status_message = this.live_prefix + this.naked_title + " is verwijderd"
+            this.status_message = ["", "is verwijderd:", this.live_prefix + this.naked_title]
         }
         if (this.temp_id !== null) {
             let moved = await browser.tabs.sendMessage(script_tab, {"type": "wikiMovePage", "page_id": this.temp_id, "new_title": this.live_prefix + this.naked_title})
             if (moved === false) {
-                this.status_message = this.temp_prefix + this.naked_title + " kan niet worden verplaatst."
-                return Promise.reject(Error(this.status_message))
+                this.status_message = ["", "kan niet worden verplaatst:", this.temp_prefix + this.naked_title]
+                return Promise.reject(Error(this.status_message.join(" ")))
             }
-            this.status_message = this.temp_prefix + this.naked_title + " is hernoemd naar " + moved["to"] 
+            this.status_message = [this.temp_prefix + this.naked_title, "is hernoemd naar", moved["to"]]
         }
     }
 
     /**
-     * Render a textual representation of the pair. If the switch is already
-     * performed, this will be the status message, otherwise a message is
-     * constructed.
+     * Render a textual representation of the pair as a triplet of temp page,
+     * action, live page. If the switch is already performed, this will be the
+     * status message, otherwise a message is constructed.
      */
     this.render = function() {
         if (this.status_message !== null) {
             return this.status_message
         }
         if (this.live_id === null) {
-            return this.temp_prefix + this.naked_title + " wordt nieuw gepubliceerd"
+            return [this.temp_prefix + this.naked_title, "wordt nieuw gepubliceerd", ""]
         } else if (this.temp_id === null) {
-            return this.live_prefix + this.naked_title + " wordt verwijderd"
+            return ["", "wordt verwijderd:", this.live_prefix + this.naked_title]
         } else {
-            return this.live_prefix + this.naked_title + " wordt vervangen door " + this.temp_prefix + this.naked_title
+            return [this.temp_prefix + this.naked_title, "vervangt", this.live_prefix + this.naked_title]
         }
    }
 }
