@@ -4,6 +4,10 @@
     "author": "Pieter Edelman",
     "version": "0.5.4",
     "description": "Some automation for the Wiki workflow",
+    "icons": {
+        "48": "icons/icon-48.png",
+        "96": "icons/icon-96.png"
+    },
 
     "background": {
         "scripts": ["scripts/background.js"]
@@ -36,6 +40,10 @@
     "page_action": {
         "browser_style": true,
         "default_title": "Publiceer",
+        "default_icon": {
+            "19": "icons/icon-19.png",
+            "38": "icons/icon-38.png"
+        },
         "show_matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:Vprepub*", "*://informatiestandaarden.test-nictiz.nl/wiki/MedMij:Vprepub*"]
     },
 
