@@ -15,6 +15,10 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         return wiki_api.deletePage(message.page_id)
     } else if (message.type == "wikiMovePage") {
         return wiki_api.movePage(message.page_id, message.new_title)
+    } else if (message.type == "getWikiText") {
+        return wiki_api.getWikiText(message.query_key)
+    } else if (message.type == "changeWikiText") {
+        return wiki_api.changePageText(message.page_id, message.new_text, message.summary, message.is_minor)
     }
 })
   

@@ -100,6 +100,41 @@ function WikiApi() {
     }
 
     /**
+     * Change the text of a wiki page.
+     * 
+     * NOTE: No conflict checking is done here, it is assumed that the
+     * operation is safe to proceed.
+     * @param page_id the id of the page to change
+     * @param new_text the new wikitext
+     * @param summary the summary for the change
+     * @param is_minor boolean to indicate if the change should be marked as
+     *                 a minor edit
+     * @returns true success, or false when the operation failed.
+     */
+    this.changePageText = async function(page_id, new_text, summary = "", is_minor = false) {
+        if (await this.retrieveToken() == false) return false
+
+        // The edit operation requires a POST call
+        let response = await this.post({
+            "action":  "edit",
+            "format":  "json",
+            "text":    new_text,
+            "summary": summary,
+            "minor":   is_minor,
+            "pageid":  page_id,
+            "token":   this.token
+        })
+
+        if (response.ok) {
+            let json = await response.json()
+            if ("edit" in json && edit["result"] == "Success") {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
      * Delete a page by page id, without leaving a redirect or message behind.
      * @param page_id the id of the page to delete.
      * @returns true on success or false on failure

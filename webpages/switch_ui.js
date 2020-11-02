@@ -210,11 +210,12 @@ function Pair(live_id, temp_id, naked_title, live_prefix, temp_prefix) {
     this.status_message = null
 
     /**
-     * Make the switch: delete the live page and rename the temp page to the
-     * live prefix.
+     * Make the switch: delete the live page, rewrite the temp page and rename
+     * it to the live prefix.
      */
     this.switch = async function() {
         if (this.live_id !== null) {
+            // Delete the live page
             let deleted = await browser.tabs.sendMessage(script_tab, {"type": "wikiDeletePage", "page_id": this.live_id})
             if (deleted === false) {
                 this.status_message = ["", "kan niet verwijderd worden:", this.live_prefix + this.naked_title]
@@ -223,9 +224,26 @@ function Pair(live_id, temp_id, naked_title, live_prefix, temp_prefix) {
             this.status_message = ["", "is verwijderd:", this.live_prefix + this.naked_title]
         }
         if (this.temp_id !== null) {
+            // Get the wikitext of the temp page
+            let query = await browser.tabs.sendMessage(script_tab, {"type": "getWikiText", "query_key": "pageid=" + this.temp_id})
+            if (query === null) {
+                this.status_message = [this.temp_prefix + this.naked_title, ": pagina kan niet gelezen worden", ""]
+                return Promise.reject(Error(this.status_message.join(" ")))
+            }
+
+            // Rewrite the links/transclusions on the temp page
+            let rewriter = new PrefixRewriter("MedMij:Vprepub", this.live_prefix)
+            let wikitext = rewriter.rewrite(query["wikitext"])
+            let edit = await browser.tabs.sendMessage(script_tab, {"type": "changeWikiText", "page_id": this.temp_id, "new_text": wikitext, "is_minor": true, "summary": "Switchting staging environment to live"})
+            if (edit === false) {
+                this.status_message = [this.temp_prefix + this.naked_title, ": pagina kan niet worden aangepast", ""]
+                return Promise.reject(Error(this.status_message.join(" ")))
+            }
+
+            // Rename the temp page to the new prefix
             let moved = await browser.tabs.sendMessage(script_tab, {"type": "wikiMovePage", "page_id": this.temp_id, "new_title": this.live_prefix + this.naked_title})
             if (moved === false) {
-                this.status_message = ["", "kan niet worden verplaatst:", this.temp_prefix + this.naked_title]
+                this.status_message = [this.temp_prefix + this.naked_title, "kan niet worden verplaatst", ""]
                 return Promise.reject(Error(this.status_message.join(" ")))
             }
             this.status_message = [this.temp_prefix + this.naked_title, "is hernoemd naar", moved["to"]]
