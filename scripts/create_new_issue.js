@@ -19,7 +19,11 @@
     new_issue_link.onclick = function() {
         let issue_num = prompt("Issuenummer:", "MM-")
         if (issue_num != null) {
-            window.location.href = "/index.php?title=MedMij:Vissue-" + issue_num + url_parts[2] + "&action=edit&source=V20" + url_parts[1] + ".01"
+            if (issue_num.match(/^[A-Za-z0-9\-\.]+$/)) {
+                window.location.href = "/index.php?title=MedMij:Vissue-" + issue_num + url_parts[2] + "&action=edit&source=V20" + url_parts[1] + ".01"
+            } else {
+                alert("Ongeldig issuenummer!")
+            }
         }
     }
     document.getElementById("ca-edit").insertAdjacentElement("afterend", new_issue_link)
