@@ -57,8 +57,10 @@
     }
 
     function modifyText(orig) {
-        // We modify links to "Vprepub", because that's what we probably want to link to
-        let modified = orig.replace(new RegExp(Vcurrent, "g"), "Vprepub")
+        // Rewrite links and transclusions
+        let rewriter = new PrefixRewriter("MedMij:" + Vcurrent, "MedMij:Vprepub")
+        let modified = rewriter.rewrite(orig)
+        console.log(modified)
         
         // Inject __NOINDEX__
         modified = "__NOINDEX__\n" + modified

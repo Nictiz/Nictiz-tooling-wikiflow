@@ -20,8 +20,6 @@
             window.location.href = "/index.php?title=MedMij:Vprepub/" + url_parts[3] + "&action=edit&merge_issue=" + url_parts[1]
         } else if (url_parts[2] == "_") { // V2019.01
             window.location.href = "/index.php?title=MedMij:V2019.01_" + url_parts[3] + "&action=edit&merge_issue=" + url_parts[1]
-        } else {
-            console.log("Whaddap")
         }
     }
     document.getElementById("ca-edit").insertAdjacentElement("afterend", merge_issue_link)

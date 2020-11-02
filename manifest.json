@@ -17,7 +17,7 @@
         {
             "matches": ["*://*.nl/index.php?title=MedMij:Vissue-*&action=edit*", "*://*.nl/index.php?title=MedMij:Vissue-*&action=edit*"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/wiki_api.js", "scripts/populate_issue.js"]
+            "js": ["scripts/wiki_api.js", "scripts/prefix_rewriter.js", "scripts/populate_issue.js"]
         },
         {
             "matches": ["*://*.nl/wiki/MedMij:V2019.01*", "*://*.nl/wiki/MedMij:V2020.01*"],
