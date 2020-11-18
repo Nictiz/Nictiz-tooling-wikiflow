@@ -45,6 +45,11 @@ function WikiApi() {
         if (response.ok) {
             try {
                 let json = await response.json()
+
+                if ("error" in json) {
+                    return Promise.reject(json["error"]["info"])
+                }
+
                 let wikitext = json.parse.wikitext["*"]
                 let pageid   = json.parse.pageid
                 let revid    = json.parse.revid
@@ -52,10 +57,10 @@ function WikiApi() {
                     return {"wikitext": wikitext, "pageid": pageid, "revid": revid}
                 }
             } catch (error) {
-                console.log(error)
+                return Promise.reject("The expected information was not in the response from the Wiki API")
             }
         }
-        return null
+        return Promise.reject("An error has occured querying the wiki api")
     }
 
     /**

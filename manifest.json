@@ -15,25 +15,22 @@
 
     "content_scripts": [
         {
-            "matches": ["*://*.nl/index.php?title=MedMij:Vissue-*&action=edit*", "*://*.nl/index.php?title=MedMij:Vissue-*&action=edit*"],
+            "matches": ["*://*.nl/wiki/*", "*://*.nl/index.php*"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/wiki_api.js", "scripts/prefix_rewriter.js", "scripts/populate_issue.js"]
-        },
-        {
-            "matches": ["*://*.nl/wiki/MedMij:V2019.01*", "*://*.nl/wiki/MedMij:V2020.01*"],
-            "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/create_new_issue.js"]
+            "js": [
+                "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js",
+                "scripts/url_analyzer.js",
+                "scripts/wiki_api.js",
+                "scripts/issue_integrator.js",
+                "scripts/dispatcher.js",
+                "scripts/prefix_rewriter.js"
+            ],
+            "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css", "css/diff.css"]
         },
         {
             "matches": ["*://*.nl/index.php?title=MedMij:Vprepub/*&action=edit*", "*://*.nl/index.php?title=MedMij:V2019.01_*&action=edit*"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/wiki_api.js", "scripts/prefix_rewriter.js", "scripts/diff_issue.js", "lib/node-diff3/node-diff3.js", "lib/codemirror/lib/codemirror.js", "lib/diff_match_patch/diff_match_patch.js", "lib/codemirror/addon/merge/merge.js"],
-            "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css", "css/diff_issue.css"]
-        },
-        {
-            "matches": ["*://*.nl/wiki/MedMij:Vissue*"],
-            "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/merge_issue.js"]
+            "js": ["scripts/wiki_api.js", "scripts/prefix_rewriter.js", "scripts/issue_integrator.js", "scripts/url_analyzer.js", "scripts/dispatcher.js"]
         },
         {
             "matches": ["*://*.nl/wiki/MedMij:Vprepub*", "*://*.nl/wiki/MedMij:Vprepub*"],
