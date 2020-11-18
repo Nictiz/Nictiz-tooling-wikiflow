@@ -40,8 +40,9 @@ class IssueIntegrator {
         this.wiki_api.query({"prop": "info", "titles": this.url_analyzer.namespace + this.url_analyzer.title}).then(result => {
             try {
                 return result["pages"]["-1"]["ns"]
-            } catch (e) {
-                return Promise.reject("Namespace couldn't be found")
+            } catch (error) {
+                console.log(error)
+                throw new Error("Namespace couldn't be found")
             }
         }).then(namespace_id => {
             return this.extractIssueIdsFromSiteInfo(namespace_id)
@@ -50,8 +51,9 @@ class IssueIntegrator {
 
             // If the "merge_issue" URL parameter is given, select the specified issue
             if (this.url_analyzer.search_params.has("merge_issue")) {
+                let dropdown = document.getElementById("issue_dropdown")
                 dropdown.querySelector("option[value='" + this.url_analyzer.search_params.get("merge_issue") + "']").selected = true
-                dropdown.onchange()
+                dropdown.dispatchEvent(new Event("change"))
             }
         }).catch(err => console.log(err))
     }
@@ -65,29 +67,32 @@ class IssueIntegrator {
         let issue_ids = []
 
         // Inspect all pages starting with Vissue in this namespace
-        let info = await this.wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500})
-        if (info != null) {
-            for (let key in info.prefixsearch) {
-                let issue = info.prefixsearch[key]
+        let info = null
+        try {
+            info = await this.wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500})
+        } catch (error) {
+            console.log(error)
+            throw new Error("Couldn't query the pages in the MedMij namespace")
+        }
 
-                // In the URL, spaces are replaced by underscores, so to get the
-                // title, we have, to replace them
-                let issue_title = issue.title.replace(new RegExp(" ", "g"), "_")
+        for (let key in info.prefixsearch) {
+            let issue = info.prefixsearch[key]
 
-                // If the end of the title matches the end of _our_ title,
-                // extract the issue number from the title and store it.
-                if (issue_title.endsWith(this.url_analyzer.separator + this.url_analyzer.title)) {
-                    let title_analyzer = new TitleAnalyzer()
-                    title_analyzer.setTitle(issue_title)
-                    if (title_analyzer.issue_id != null) {
-                        issue_ids.push(title_analyzer.issue_id)
-                    } else {
-                        console.log("Couldn't extract issue num from '" + issue.title + "'")
-                    }
+            // In the URL, spaces are replaced by underscores, so to get the
+            // title, we have, to replace them
+            let issue_title = issue.title.replace(new RegExp(" ", "g"), "_")
+
+            // If the end of the title matches the end of _our_ title,
+            // extract the issue number from the title and store it.
+            if (issue_title.endsWith(this.url_analyzer.separator + this.url_analyzer.title)) {
+                let title_analyzer = new TitleAnalyzer()
+                title_analyzer.setTitle(issue_title)
+                if (title_analyzer.issue_id != null) {
+                    issue_ids.push(title_analyzer.issue_id)
+                } else {
+                    console.log("Couldn't extract issue num from '" + issue.title + "'")
                 }
             }
-        } else {
-            return Promise.reject("Couldn't query the pages in the MedMij namespace")
         }
         return issue_ids
     }
@@ -224,8 +229,9 @@ class IssueIntegrator {
         }).then(() => {
             // Now find the the first revision of this page to reconstruct the common ancestor.
             return this.wiki_api.query({"prop": "revisions", "rvlimit": 500, "pageids": this.issue_info["pageid"]})
-        }).then(issue_revisions => {
-            let first_revision = issue_revisions[issue_revisions.length - 1].revid
+        }).then(query => {
+            let revisions = query["pages"][this.issue_info["pageid"]]["revisions"]
+            let first_revision = revisions[revisions.length - 1].revid
             return this.wiki_api.getWikiText({oldid: first_revision})
         }).then(ancestor_info => {
             this.ancestor_info = ancestor_info

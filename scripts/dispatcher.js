@@ -90,11 +90,66 @@ function populateIssue(url_analyzer) {
     })
 }
 
+/**
+ * On issue pages, add a button to integrate the issue into the prepub page(s).
+ */
+function insertIntegrateIssueLink(url_analyzer) {
+    let wiki_api = new WikiApi()
+    wiki_api.query({"list": "prefixsearch", "pssearch": url_analyzer.namespace + "Vprepub_", "pslimit": 500}).then(query => {
+
+        // Create a dropdown list to choose the prepub version we want to integrate with
+        let dropdown = document.createElement("select")
+        
+        for (const key in query.prefixsearch) {
+            let title = query.prefixsearch[key].title
+            let title_analyzer = new TitleAnalyzer(title)
+            if (title_analyzer.title == url_analyzer.title) {
+                // If we have a prepub page that matches our title, add the version to the select box with the full
+                // title as value
+                if (title_analyzer.version) {
+                    let option = document.createElement("option")
+                    option.setAttribute("value", title)
+                    option.innerHTML = title_analyzer.version
+                    dropdown.appendChild(option)
+                } else {
+                    console.log(`Couldn't extract version number title from ${title}.`)
+                }
+            }
+        }
+
+        if (dropdown.childNodes.length > 0) {
+            // So we have some content. Let's also add the default, empty element
+            let empty = document.createElement("option")
+            empty.setAttribute("selected", "selected")
+            empty.innerHTML = "Selecteer prepub-versie"
+            dropdown.insertAdjacentElement("afterbegin", empty)
+
+            // When a value is selected. the URL is changed to the edit URL of that prepub page, with the merge_issue
+            // parameter set to this issue
+            dropdown.addEventListener("change", event => {
+                let value = dropdown.selectedOptions[0].value
+                window.location.href = `/index.php?title=${value}&action=edit&merge_issue=${url_analyzer.issue_id}`
+            })
+
+            // Add a "merge issue" link, which will be replaced by the dropdown when clicked
+            let merge_issue_link = document.createElement("li")
+            merge_issue_link.innerHTML = "<span><a>Integreer aanpassingen</a></span>"
+            merge_issue_link.onclick = function() {
+                merge_issue_link.innerHTML = ""
+                merge_issue_link.appendChild(dropdown)
+            }
+            document.getElementById("ca-edit").insertAdjacentElement("afterend", merge_issue_link)
+        }
+    })
+}
+
 (function() {
     let url_analyzer = new URLAnalyzer()
     if (url_analyzer.type == "read") {
         if (url_analyzer.realm == "production") {
             insertNewIssueLink(url_analyzer)
+        } else if (url_analyzer.realm == "issue") {
+            insertIntegrateIssueLink(url_analyzer)
         }
     } else if (url_analyzer.type == "create") {
         populateIssue(url_analyzer)

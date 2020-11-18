@@ -5,3 +5,7 @@
 .CodeMirror-merge .CodeMirror {
     height: 700px;
 }
+
+div#p-views li select {
+    height: 100%;
+}
