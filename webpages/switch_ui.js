@@ -1,24 +1,21 @@
 /**
- * Code to switch environments, which means that all "live" pages, identified
- * by a specified prefix, are deleted, and all "staging" pages, starting with
- * another prefix, are duplicated to the "live" prefix, rewriting links and
+ * Code to switch environments, which means that all "live" pages, identified by a specified prefix, are deleted, and
+ * all "staging" pages, starting with another prefix, are duplicated to the "live" prefix, rewriting links and
  * transclusions to this new prefix.
  * 
- * This script cannot work on its own, there should be a tab with a content 
- * script running on a wiki page to perform the wiki api operations in the
- * proper context, which is set in the background script. 
+ * This script cannot work on its own, there should be a tab with a content script running on a wiki page to perform
+ * the wiki api operations in the proper context, which is set in the background script. 
  */
 
-(async function() {
-    // Get the id of the tab where the content script runs (as a global 
-    // variable)
-    let background_page = await browser.runtime.getBackgroundPage()
-    script_tab = background_page.script_tab_id
+// Wait till we have the id of the tab where the content script runs before we proceed
+browser.runtime.getBackgroundPage().then(page => {
+    // Store the script tab in a global page variable so we can use it to communicate with the background script
+    script_tab = page.script_tab_id
 
     let migrater = new Migrater()
 
-    // When the search button is clicked, search for all live and staging pages 
-    // using the prefixes specified by the user.
+    // When the search button is clicked, search for all live and staging pages using the prefixes specified by the
+    // user.
     document.getElementById("button_search").addEventListener("click", (event) => {
         // Reset everything
         document.getElementById("error").style.visibility = "hidden"
@@ -48,8 +45,7 @@
         })
     })
 
-    // When the switch button is clicked, delete all live pages and rename all
-    // staging pages using the live prefix.
+    // When the switch button is clicked, delete all live pages and rename all staging pages using the live prefix.
     document.getElementById("button_switch").addEventListener("click", async function(event) {
         document.getElementById("error").style.visibility = "hidden"
         
@@ -81,37 +77,39 @@
         error.innerHTML = msg
         error.style.visibility = "initial"
     }
-})()
 
+})
+    
 /**
  * The main functionality for searching and switching pages.
  */
-function Migrater() {
-    this.live_prefix    = ""
-    this.staging_prefix = ""
+class Migrater {
+    constructor() {
+        this.live_prefix    = ""
+        this.staging_prefix = ""
 
-    this.pairs = []
+        this.pairs = []
+    }
 
     /** 
      * Collect all live and staging pages, and store them as Pairs in the "pairs" array.
-     * @param live_prefix the prefix to search for when looking for live pages
-     * @param staging_prefix the prefix to search for when looking for staging pages
+     * @param {string} live_prefix - The prefix to search for when looking for live pages.
+     * @param {string} staging_prefix - The prefix to search for when looking for staging pages.
      */
-    this.collectPages = async function(live_prefix, staging_prefix) {
+    async collectPages(live_prefix, staging_prefix) {
         this.live_prefix    = live_prefix
         this.staging_prefix = staging_prefix
 
-        // Search live and staging pages, respectively
+        // Search live and staging pages and wait untill we have them all.
         let live_pages    = null
         let staging_pages = null
         let searches = []
-        searches.push(this.collectPrefixedPages(live_prefix)
-            .then(pages => live_pages = pages)
-            .catch(err => {return Promise.reject(err)}))
-        searches.push(this.collectPrefixedPages(staging_prefix)
-            .then(pages => staging_pages = pages)
-            .catch(err => {return Promise.reject(err)}))
-
+        searches.push(
+            this._collectPrefixedPages(live_prefix).then(pages => live_pages = pages)
+        )
+        searches.push(
+            this._collectPrefixedPages(staging_prefix).then(pages => staging_pages = pages)
+        )
         await Promise.all(searches)
         
         // Match all live pages to staging pages, or store them as unmatched Pair
@@ -135,18 +133,13 @@ function Migrater() {
     }
 
     /**
-     * Helper method to collect all pages on the wiki starting with a given
-     * prefix.
-     * @param prefix search pages starting with this prefix. 
-     * @returns an object with page ids as key and page title as value
+     * Helper method to collect all pages on the wiki starting with a given prefix.
+     * @param {string} prefix - Search pages starting with this prefix. 
+     * @returns {Promise<Object|Error>} - an object with page ids as key and page title as value
      */
-    this.collectPrefixedPages = async function(prefix) {
+    async _collectPrefixedPages(prefix) {
         let payload = {"list": "prefixsearch", "pslimit": 500, "pssearch": prefix}
-        let success = true
-        let result = await browser.tabs.sendMessage(script_tab, {"type": "wikiQuery", "payload": payload}).catch(() => {success = false})
-        if (!success) {
-            return Promise.reject(Error("Error searching for pages"))
-        }
+        let result = await browser.tabs.sendMessage(script_tab, {"type": "wikiQuery", "payload": payload})
 
         let pages = {}
         for (const page_num in result["prefixsearch"]) {
@@ -158,20 +151,20 @@ function Migrater() {
     }
 
     /**
-     * Switch the staging pages to live pages (or publish staging pages and delete
-     * live pages, when pairs aren't matched).
-     * @param active_indexes an array with booleans to indicate for each index
-     *                       whether the switch should be made.
-     * @param callback a callback function which takes the index, the status
-     *                 and the message of the pair switch.
+     * Switch the staging pages to live pages (or publish staging pages and delete live pages when pairs aren't
+     * matched).
+     * @param {[boolean]} active_indexes - Indicate for each index whether the switch should be made.
+     * @param {function} callback - Callback function which takes the index, the status and the message of the pair
+     *                              switch.
      */
-    this.switchPages = async function(active_indexes, callback) {
+    async switchPages(active_indexes, callback) {
         for (let i = 0; i < this.pairs.length; i++) {
             if (active_indexes[i]) {
                 let pair = this.pairs[i]
                 pair.switch(this.script_tab).then(() => {
                     callback(i, true, pair.render())
                 }).catch(err => {
+                    console.log(err)
                     callback(i, false, pair.render())
                 })
             }
@@ -179,45 +172,51 @@ function Migrater() {
     }
 }
 
-/**
- * A pair of a live page and a staging page which will replace it. Either may be
- * empty to indicate a new or deleted page after publishing.
- * @param live_id the page id of the live page. May be null when there is no live page.
- * @param staging_id the page id of the staging page. May be null when there is no staging page.
- * @param naked_title the title of the page without any prefixes.
- * @param live_prefix the prefix for live pages.
- * @param staging_prefix the prefix for staging pages.
- */
-function Pair(live_id, staging_id, naked_title, live_prefix, staging_prefix) {
-    this.live_id        = live_id
-    this.staging_id     = staging_id
-    this.naked_title    = naked_title
-    this.live_prefix    = live_prefix
-    this.staging_prefix = staging_prefix
+class Pair {
+    /**
+     * A pair of a live page and a staging page which will replace it. Either may be
+     * empty to indicate a new or deleted page after publishing.
+     * @param {number} live_id - The page id of the live page. May be null when there is no live page.
+     * @param {number} staging_id - The page id of the staging page. May be null when there is no staging page.
+     * @param {string} naked_title - The title of the page without any prefixes.
+     * @param {string} live_prefix - The prefix for live pages.
+     * @param {string} staging_prefix - The prefix for staging pages.
+     */
+    constructor(live_id, staging_id, naked_title, live_prefix, staging_prefix) {
+        this.live_id        = live_id
+        this.staging_id     = staging_id
+        this.naked_title    = naked_title
+        this.live_prefix    = live_prefix
+        this.staging_prefix = staging_prefix
 
-    // Cache the status message when performing the switch 
-    this.status_message = null
+        // Cache the status message when performing the switch 
+        this.status_message = null
+    }
 
     /**
      * Make the switch: delete the live page, rewrite the staging page and rename
      * it to the live prefix.
      */
-    this.switch = async function() {
+    async switch() {
         if (this.live_id !== null) {
             // Delete the live page
-            let deleted = await browser.tabs.sendMessage(script_tab, {"type": "wikiDeletePage", "page_id": this.live_id}).catch(err => console.log(err))
-            if (deleted === false) {
+            try {
+                await browser.tabs.sendMessage(script_tab, {"type": "wikiDeletePage", "page_id": this.live_id})
+                this.status_message = ["", "is verwijderd:", this.live_prefix + this.naked_title]
+            } catch (error) {
+                console.log(error)
                 this.status_message = ["", "kan niet verwijderd worden:", this.live_prefix + this.naked_title]
-                return Promise.reject(Error(this.status_message.join(" ")))
+                throw new Error(this.status_message.join(" "))
             }
-            this.status_message = ["", "is verwijderd:", this.live_prefix + this.naked_title]
         }
         if (this.staging_id !== null) {
             // Duplicate the staging page to the live page
-            let duplication = await browser.tabs.sendMessage(script_tab, {"type": "wikiDuplicatePage", "title": this.staging_prefix + this.naked_title, "new_title": this.live_prefix + this.naked_title})
-            if (duplication === false) {
+            try {
+                await browser.tabs.sendMessage(script_tab, {"type": "wikiDuplicatePage", "title": this.staging_prefix + this.naked_title, "new_title": this.live_prefix + this.naked_title})
+            } catch (error) {
+                console.log(error)
                 this.status_message = [this.staging_prefix + this.naked_title, ": pagina kan niet gedupliceerd worden", ""]
-                return Promise.reject(Error(this.status_message.join(" ")))
+                throw new Error(this.status_message.join(" "))
             }
 
             // Get the id of the new live page
@@ -225,35 +224,38 @@ function Pair(live_id, staging_id, naked_title, live_prefix, staging_prefix) {
             let id_query = await browser.tabs.sendMessage(script_tab, {"type": "wikiQuery", "payload": payload})
             if (id_query === null || Object.keys(id_query["pages"]).length < 1) {
                 this.status_message = ["", "Kan geen id ophalen voor pagina", this.live_prefix + this.naked_title]
-                return Promise.reject(Error(this.status_message.join(" ")))
+                throw new Error(this.status_message.join(" "))
             }
             let new_live_id = Object.keys(id_query["pages"])[0]
 
             // Get the wikitext of the new live page
-            let text_query = await browser.tabs.sendMessage(script_tab, {"type": "wikiGetText", "query_key": "pageid=" + new_live_id})
-            if (text_query === null) {
+            let text_query = ""
+            try {
+                text_query = await browser.tabs.sendMessage(script_tab, {"type": "wikiGetText", "query_key": {pageid: new_live_id}})
+            } catch (error) {
+                console.log(error)
                 this.status_message = [this.temp_prefix + this.naked_title, ": pagina kan niet gelezen worden", ""]
-                return Promise.reject(Error(this.status_message.join(" ")))
+                throw new Error(this.status_message.join(" "))
             }
 
             // Rewrite the links/transclusions on the live page
             let rewriter = new PrefixRewriter(this.staging_prefix, this.live_prefix)
             let wikitext = rewriter.rewrite(text_query["wikitext"])
-            let edit = await browser.tabs.sendMessage(script_tab, {"type": "wikiChangeText", "page_id": new_live_id, "new_text": wikitext, "is_minor": true, "summary": "Switchting staging environment to live"})
-            if (edit === false) {
+            try {
+                await browser.tabs.sendMessage(script_tab, {"type": "wikiChangeText", "page_id": new_live_id, "new_text": wikitext, "is_minor": true, "summary": "Switchting staging environment to live"})
+                this.status_message = [this.staging_prefix + this.naked_title, "is gepubliceerd naar", this.live_prefix + this.naked_title]
+            } catch (error) {
                 this.status_message = [this.live_prefix + this.naked_title, ": pagina kan niet worden aangepast", ""]
-                return Promise.reject(Error(this.status_message.join(" ")))
+                throw new Error(this.status_message.join(" "))
             }
-            this.status_message = [this.staging_prefix + this.naked_title, "is gepubliceerd naar", this.live_prefix + this.naked_title]
         }
     }
 
     /**
-     * Render a textual representation of the pair as a triplet of staging page,
-     * action, live page. If the switch is already performed, this will be the
-     * status message, otherwise a message is constructed.
+     * Render a textual representation of the pair as a triplet of staging page, action, live page. If the switch is
+     * already performed, this will be the status message, otherwise a message is constructed.
      */
-    this.render = function() {
+    render() {
         if (this.status_message !== null) {
             return this.status_message
         }

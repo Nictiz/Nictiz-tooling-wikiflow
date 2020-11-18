@@ -67,7 +67,7 @@ function populateIssue(url_analyzer) {
 
     // Ok, lets go ahead
     let wiki_api = new WikiApi()
-    let production_query = "page=" + url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title
+    let production_query = {page: url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title}
     wiki_api.getWikiText(production_query).then(production_info => {
         // Rewrite links and transclusions
         let rewriter = new PrefixRewriter(url_analyzer.namespace + source, url_analyzer.namespace + "Vprepub")

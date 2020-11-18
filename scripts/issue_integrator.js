@@ -216,17 +216,17 @@ class IssueIntegrator {
         this.issue_info    = null
         this.ancestor_info = null // We could reuse a previous answer, but for now lets not make it too complex
         
-        return this.wiki_api.getWikiText("page=" + this.url_analyzer.namespace + "Vissue-" + issue_id + this.url_analyzer.separator + this.url_analyzer.title).then(issue_info => {
+        return this.wiki_api.getWikiText({page: this.url_analyzer.namespace + "Vissue-" + issue_id + this.url_analyzer.separator + this.url_analyzer.title}).then(issue_info => {
             this.issue_info = issue_info
 
             // The issue box will differ between the issue and the prepub page, so lets convert it already
             this.issue_info.wikitext = this.rewriteText(this.issue_info.wikitext)
         }).then(() => {
-            // Now reconstruct the common ancestor by going back to the first revision.
-            return this.wiki_api.getPageRevisions(this.issue_info["pageid"])
+            // Now find the the first revision of this page to reconstruct the common ancestor.
+            return this.wiki_api.query({"prop": "revisions", "rvlimit": 500, "pageids": this.issue_info["pageid"]})
         }).then(issue_revisions => {
             let first_revision = issue_revisions[issue_revisions.length - 1].revid
-            return this.wiki_api.getWikiText("oldid=" + first_revision)
+            return this.wiki_api.getWikiText({oldid: first_revision})
         }).then(ancestor_info => {
             this.ancestor_info = ancestor_info
             // TODO: This stuff is about issueboxes, for which we need a policy

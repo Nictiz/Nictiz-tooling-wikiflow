@@ -35,7 +35,7 @@
         {
             "matches": ["*://*.nl/wiki/MedMij:Vprepub*", "*://*.nl/wiki/MedMij:Vprepub*"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/wiki_api.js", "scripts/switch_pages.js"]
+            "js": ["scripts/switch_pages.js"]
         }
     ],
 
