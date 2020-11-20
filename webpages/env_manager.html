@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Beheer omgevingen</title>
+    <link rel="stylesheet" href="env_manager.css">
+    <script src="../scripts/prefix_rewriter.js"></script>
+</head>
+<body>
+    <h1>Beheer omgevingen</h1>
+    <form id="manage_form">
+        <div id="input-container">
+            <table>
+                <tr>
+                    <td><label for="prefix_source">Prefix voor de bronomgeving (incl. namespace)</label></td>
+                    <td><input type="text" id="prefix_source"></td>
+                </tr>
+                <tr>
+                    <td><label for="prefix_target">Prefix voor de doelomgeving (incl. namespace)</label></td>
+                    <td><input type="text" id="prefix_target" disabled="disabled"></td>
+                </tr>
+            </table>
+            <div>
+                <input type="radio" name="action" id="publish_prepub" value="publish_prepub" checked="checked"><label for="publish_prepub">Publiceer prepub naar live</label><br/>
+                <input type="radio" name="action" id="create_prepub" value="create_prepub"><label for="create_prepub">Maak nieuwe prepub aan</label><br/>
+                <input type="radio" name="action" id="duplicate_env" value="duplicate_env"><label for="duplicate_env">Dupliceer omgeving</label><br/>
+                <input type="radio" name="action" id="delete_env" value="delete_env"><label for="delete_env">Verwijder omgeving</label>
+            </div>
+        </div>
+        <button type="button" id="button_search" disabled="disabled">Zoek pagina's</button>
+        <div id="error"></div>
+        <div id="pairs">
+            <table id='pairs_table'></table>
+        </div>
+        <button type="button" id="button_action" disabled="disabled"></button>
+    </form>
+
+    </div>
+
+    <script src="env_manager.js"></script>
+</body>
+</html>

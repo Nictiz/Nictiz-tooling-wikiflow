@@ -28,9 +28,9 @@
             "css": ["lib/codemirror/lib/codemirror.css", "lib/codemirror/addon/merge/merge.css", "css/wikiflow.css"]
         },
         {
-            "matches": ["*://*.nl/wiki/MedMij:Vprepub*", "*://*.nl/wiki/MedMij:Vprepub*"],
+            "matches": ["*://*.nl/wiki/Hoofdpagina"],
             "include_globs": ["*://informatiestandaarden.*nictiz.nl/*"],
-            "js": ["scripts/switch_pages.js"]
+            "js": ["scripts/env_manager.page.js"]
         }
     ],
 
@@ -41,7 +41,7 @@
             "19": "icons/icon-19.png",
             "38": "icons/icon-38.png"
         },
-        "show_matches": ["*://informatiestandaarden.nictiz.nl/wiki/MedMij:Vprepub*", "*://informatiestandaarden.test-nictiz.nl/wiki/MedMij:Vprepub*"]
+        "show_matches": ["*://informatiestandaarden.nictiz.nl/wiki/Hoofdpagina", "*://informatiestandaarden.test-nictiz.nl/wiki/Hoofdpagina"]
     },
 
     "browser_specific_settings": {

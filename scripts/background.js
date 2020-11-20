@@ -13,7 +13,7 @@
 browser.pageAction.onClicked.addListener((tab) => {
     script_tab_id = tab.id
     let create_data = {
-        url: "webpages/switch_ui.html",
+        url: "webpages/env_manager.html",
         openerTabId: tab.id
     }
     browser.tabs.create(create_data)
