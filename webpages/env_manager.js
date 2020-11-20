@@ -181,15 +181,25 @@ class ManageUI {
         this.pairs_table.innerHTML = ""
         try {
             this.migrator.setPrefixes(this.source_input.value, this.target_input.value)
+            this.source_input.setCustomValidity("")
+            this.target_input.setCustomValidity("")
             if (this.target_input.getAttribute("disabled") == null) {
                 this.target_input.value = this.migrator.target_prefix
             }
             this.button_search.removeAttribute("disabled")
             this.button_action.setAttribute("disabled", "disabled")
         } catch (error) {
-            this.showError(error)
-            this.button_search.setAttribute("disabled", "disabled")
-            return false
+            if (error instanceof PrefixError) {
+                if (error.kind == "source") {
+                    this.source_input.setCustomValidity(error.message)
+                } else if (error.kind == "target") {
+                    this.target_input.setCustomValidity(error.message)
+                }
+                this.button_search.setAttribute("disabled", "disabled")
+                return false    
+            } else {
+                throw error
+            }
         }
 
         return true
@@ -204,14 +214,26 @@ class ManageUI {
             this.error_box.style.visibility = "hidden"
         } else {
             if (msg instanceof Error) {
-                msg = msg.toString()
+                msg = msg.message
             }
             this.error_box.innerHTML = msg
             this.error_box.style.visibility = "initial"
         }
     }
 }
-    
+
+class PrefixError extends Error {
+    /**
+     * Custom error for prefixes that aren't in the proper format.
+     * @param {string} kind - the kind of prefix that is being set (arbitrary string)
+     * @param {string} message - the error message
+     */
+    constructor(kind, message) {
+        super(message)
+        this.kind = kind
+    }
+}
+
 class Migrator {
     /**
      * The main functionality managing an environment.
@@ -265,18 +287,18 @@ class Migrator {
         } else {
             let parts = source_prefix.match(/([A-Za-z]+:)?V(prepub-)?([A-Za-z0-9\.]+?)[\/_]?$/)
             if (parts == null) {
-                throw `Geen valide prefix: "${source_prefix}"`
+                throw new PrefixError("source", "Geen valide prefix")
             }
 
             if (this.action == this.ACTIONS.publish) {
                 if (parts[2] == null) {
-                    throw `Geen valide prefix voor prepub-omgevingen: "${source_prefix}"`
+                    throw new PrefixError("source", "Geen valide prefix voor prepub-omgevingen")
                 }
                 this.source_prefix = source_prefix
                 this.target_prefix = parts[1] + "V" + parts[3]
             } else if (this.action == this.ACTIONS.create_prepub) {
                 if (parts[2] != null) {
-                    throw `Prefix is al een prepub-omgeving: "${source_prefix}"`
+                    throw new PrefixError("source", "Prefix is al een prepub-omgeving")
                 }
                 this.source_prefix = source_prefix
                 this.target_prefix = parts[1] + "Vprepub-" + parts[3]
@@ -368,7 +390,7 @@ class Migrator {
                     if (this.action == this.ACTIONS.create_prepub) {
                         summary = `Create prepub environment from ${this.source_prefix}`
                     } else {
-                        summary = `Duplice ${this.source_prefix} environment to ${this.target_prefix}`
+                        summary = `Duplicate ${this.source_prefix} environment to ${this.target_prefix}`
                     }
                     pair.duplicate(this.source_prefix, this.target_prefix, summary).then(() => {
                         ui_callback(i, true, pair)

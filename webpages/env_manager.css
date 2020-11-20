@@ -13,7 +13,8 @@ div#error {
 }
 
 table#pairs_table {
-    border-collapse: collapse
+    border-collapse: collapse;
+    border: 1px dotted gray;
 }
 table#pairs_table td {
     padding: 2px;
