@@ -6,6 +6,11 @@ div#input-container {
     display: flex;
 }
 
+fieldset#input-prefixes input {
+    margin-top: 0.2em;
+    margin-bottom: 0.5em;
+}
+
 div#error {
     background-color: lightpink;
     visibility: hidden;
