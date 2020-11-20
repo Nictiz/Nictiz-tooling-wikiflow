@@ -97,7 +97,10 @@ class ManageUI {
         // Event listener for the action button
         this.button_action.addEventListener("click", async event => {
             this.showError(false)
-            
+            this.button_search.setAttribute("disabled", "disabled")
+            this.button_action.setAttribute("disabled", "disabled")
+            this.button_action.innerHTML = "Bezig ..."
+
             // Construct a list of indexes which should be included/excluded from the checkboxes in the pairs table.
             let active_indexes = []
             let rows = document.getElementById("pairs_table").getElementsByTagName("tr")
@@ -166,6 +169,9 @@ class ManageUI {
                 }
                 inner_html += `<td>${message_html}</td>`
                 tr.innerHTML = inner_html
+            }).then(() => {
+                this.button_search.removeAttribute("disabled")
+                this.button_action.innerHTML = "Gereed"
             })
         })
     }
@@ -374,12 +380,15 @@ class Migrator {
      * @param {function} ui_callback - Callback function for the ui which takes the index, the status and Pair object.
      */
     async performAction(active_indexes, ui_callback) {
+        let actions = []
+
         for (let i = 0; i < this.pairs.length; i++) {
             if (active_indexes[i]) {
                 let pair = this.pairs[i]
 
+                let action = null
                 if (this.action == this.ACTIONS.publish) {
-                    pair.switch(this.source_prefix, this.target_prefix, "Publish prepub to live environment").then(() => {
+                    action = pair.switch(this.source_prefix, this.target_prefix, "Publish prepub to live environment").then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
@@ -392,22 +401,24 @@ class Migrator {
                     } else {
                         summary = `Duplicate ${this.source_prefix} environment to ${this.target_prefix}`
                     }
-                    pair.duplicate(this.source_prefix, this.target_prefix, summary).then(() => {
+                    action = pair.duplicate(this.source_prefix, this.target_prefix, summary).then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
                         ui_callback(i, false, pair)
                     })   
                 } else if (this.action == this.ACTIONS.delete) {
-                    pair.delete("source").then(() => {
+                    action = pair.delete("source").then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
                         ui_callback(i, false, pair)
                     })   
                 }
+                actions.push(action)
             }
         }
+        await Promise.all(actions)
     }
 }
 
