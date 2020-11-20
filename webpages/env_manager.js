@@ -80,7 +80,7 @@ class ManageUI {
                         if (pair.target_id) {
                             throw "Er bestaan al pagina's in de doelomgeving"
                         }
-                        inner_html += `<td>${pair.source_title}</td><td>wordt gepubliceerd als</td><td>${pair.target_title}</td>`
+                        inner_html += `<td>${pair.source_title}</td><td>wordt gedupliceerd als</td><td>${pair.target_title}</td>`
                     } else if (this.migrator.action == this.migrator.ACTIONS.delete) {
                         inner_html += `<td>${pair.source_title}</td><td>wordt verwijderd</td>`
                     }
@@ -255,35 +255,32 @@ class Migrator {
      *                                   target_prefix is unneeded or will be generated.
      * @throws {Error} - when the input is not fit for the intended action.
      */
-    setPrefixes(source_prefix, target_prefix) {
-        let prefix_re = new RegExp(/([A-Za-z]+:)?V(prepub-)?([A-Za-z0-9\.]+?)[\/_]?$/)
-        let parts = source_prefix.match(prefix_re)
-        if (parts == null) {
-            throw `Geen valide prefix: ${source_prefix}`
-        }
-
-        if (this.action == this.ACTIONS.publish) {
-            if (parts[2] == null) {
-                throw `Geen valide prefix voor prepub-omgevingen: ${source_prefix}`
-            }
-            this.source_prefix = source_prefix
-            this.target_prefix = parts[1] + "V" + parts[3]
-        } else if (this.action == this.ACTIONS.create_prepub) {
-            if (parts[2] != null) {
-                throw `Prefix is al een prepub-omgeving: ${source_prefix}`
-            }
-            this.source_prefix = source_prefix
-            this.target_prefix = parts[1] + "Vprepub-" + parts[3]
-        } else if (this.action == this.ACTIONS.duplicate) {
-            let target_parts = target_prefix.match(prefix_re)
-            if (target_parts == null) {
-                throw `Geen valide prefix: ${target_prefix}`
-            }
+    setPrefixes(source_prefix, target_prefix) {        
+        if (this.action == this.ACTIONS.duplicate) {
             this.source_prefix = source_prefix
             this.target_prefix = target_prefix
         } else if (this.action == this.ACTIONS.delete) {
             this.source_prefix = source_prefix
             this.target_prefix = null
+        } else {
+            let parts = source_prefix.match(/([A-Za-z]+:)?V(prepub-)?([A-Za-z0-9\.]+?)[\/_]?$/)
+            if (parts == null) {
+                throw `Geen valide prefix: "${source_prefix}"`
+            }
+
+            if (this.action == this.ACTIONS.publish) {
+                if (parts[2] == null) {
+                    throw `Geen valide prefix voor prepub-omgevingen: "${source_prefix}"`
+                }
+                this.source_prefix = source_prefix
+                this.target_prefix = parts[1] + "V" + parts[3]
+            } else if (this.action == this.ACTIONS.create_prepub) {
+                if (parts[2] != null) {
+                    throw `Prefix is al een prepub-omgeving: "${source_prefix}"`
+                }
+                this.source_prefix = source_prefix
+                this.target_prefix = parts[1] + "Vprepub-" + parts[3]
+            }
         }
 
         this.pairs = []
