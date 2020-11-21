@@ -2,7 +2,7 @@
  * A "central dispatcher" for everything that can be done on the Informatiestandaarden wiki, based on the URL:
  * - Add a "create issue" button.
  * - Populate the text of an issue page.
- * - Add the tools to merge an issue page to a staging environment (from issue_integrator.js)
+ * - Add the tools to merge an issue page to a prepub environment (from issue_integrator.js)
  */
 
 /**
@@ -153,7 +153,7 @@ function insertIntegrateIssueLink(url_analyzer) {
         }
     } else if (url_analyzer.type == "create") {
         populateIssue(url_analyzer)
-    } else if (url_analyzer.type == "edit" && url_analyzer.realm == "staging") {
+    } else if (url_analyzer.type == "edit" && url_analyzer.realm == "prepub") {
         let integrator = new IssueIntegrator(url_analyzer)
         integrator.integrate()
     }

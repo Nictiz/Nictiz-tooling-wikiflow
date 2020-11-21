@@ -1,6 +1,6 @@
 /**
  * Code to switch environments, which means that all "live" pages, identified by a specified prefix, are deleted, and
- * all "staging" pages, starting with another prefix, are duplicated to the "live" prefix, rewriting links and
+ * all "prepub" pages, starting with another prefix, are duplicated to the "live" prefix, rewriting links and
  * transclusions to this new prefix.
  * 
  * This script cannot work on its own, there should be a tab with a content script running on a wiki page to perform
@@ -344,7 +344,7 @@ class Migrator {
     async collectPages() {
         this.pairs = []
 
-        // Search live and staging pages and wait untill we have them all.
+        // Search for source and target pages, and wait untill we have them all.
         let source_pages = {}
         let target_pages = {}
         let searches = []
@@ -371,7 +371,7 @@ class Migrator {
             this.pairs.push(new Pair(source_title, source_pages[source_title], target_title, target_id))
             delete source_pages[source_title]
         }
-        // Add remaining staging pages as unbalanced Pair's
+        // Add remaining prepub pages as unbalanced Pair's
         for (const target_title in target_pages) {
             this.pairs.push(new Pair(null, null, target_title, target_pages[target_title]))
         }

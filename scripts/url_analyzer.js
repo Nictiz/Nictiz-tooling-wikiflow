@@ -3,12 +3,12 @@
  * 
  * Upon succesful analysis, this object contains the relevant information in the keys below. Optional fields may be
  * unset. When the title can't be analyzed, none of the fields will be set.
- * - realm: "production", "staging" or "issue"
+ * - realm: "production", "prepub" or "issue"
  * - title: The actual title of the page, without version info and such. This will be in the URL format, with
  *          underscores instead of spaces.
  * - namespace: The namespace of the current page, if any, including the ":".
  * - version: The version according to the title (without the leading "V"). Only filled when real is "production" or
- *            "staging".
+ *            "prepub".
  * - issue_id: The issue id for the current page. Only filled if realm is "issue".
  * 
  * @param {string} [title] - The page title to analyze. May also be set using setTitle()
@@ -45,7 +45,7 @@ class TitleAnalyzer {
     _analyzeTitle(title) {
         title = title.replace(new RegExp(" ", "g"), "_") // Normalize the title to URL format, using underscores instead of spaces
 
-        let parts = title.match(/^(?<namespace>[A-Za-z]+:)?V(?<realm>issue-|prepub-|prepub)?(?<version>.*?)(?<separator>[_\/])(?<title>.*)$/)
+        let parts = title.match(/^(?<namespace>[A-Za-z]+:)?V(?<realm>issue-|prepub-)?(?<version>.*?)(?<separator>[_\/])(?<title>.*)$/)
 
         if (parts !== null) {
             let groups = parts.groups
@@ -59,12 +59,8 @@ class TitleAnalyzer {
                     this.realm = "issue"
                     this.issue_id = groups["version"]
                 } else if (groups["realm"] == "prepub-") {
-                    this.realm = "staging"
+                    this.realm = "prepub"
                     this.version = groups["version"]
-                } else if (groups["realm"] == "prepub" && groups["separator"] == "/") {
-                    // Temp hack for backwards compatibility
-                    this.realm = "staging"
-                    this.version = "2020.01"
                 } else {
                     this.realm = "production"
                     this.version = groups["version"]
@@ -72,7 +68,6 @@ class TitleAnalyzer {
             }
         }
     }
-
 }
 
 /**
