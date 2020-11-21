@@ -33,6 +33,28 @@ class ManageUI {
         this.error_box = document.getElementById("error")
         this.pairs_table = document.getElementById("pairs_table")
 
+        // Check if we have permissions to perform operations. If not, we can still perform all the searches, but the
+        // button to perform the action will remain inactive.
+        this.has_permissions = false
+        browser.tabs.sendMessage(script_tab, {
+            type: "wikiQuery", payload: {
+                meta: "userinfo", uiprop: "rights"
+            }
+        }).then(result => {
+            let user_box = document.getElementById("user_box")
+            if (result.userinfo.id != "0") {
+                user_box.innerHTML = `Ingelogd als ${result.userinfo.name}`
+            } else {
+                user_box.innerHTML = "Niet ingelogd"
+            }
+            if (result.userinfo.id == "0" || !"delete" in result.userinfo.rights && !"duplicate" in result.userinfo.rights) {
+                this._showError("Onvoldoende rechten om bewerkingen te kunnen uitvoeren")
+            } else {
+                this.has_permissions = true
+            }
+        })
+
+
         // Attach event listeners to the radio buttons
         document.querySelectorAll("input[type='radio'][name='action']").forEach(element => {
             element.addEventListener("change", event => {
@@ -88,15 +110,17 @@ class ManageUI {
                     this.pairs_table.appendChild(tr)
                 })
 
-                this.button_action.removeAttribute("disabled")
+                if (this.has_permissions) {
+                    this.button_action.removeAttribute("disabled")
+                }
             }).catch(error => {
-                this.showError(error)
+                this._showError(error)
             })
         })
 
         // Event listener for the action button
         this.button_action.addEventListener("click", async event => {
-            this.showError(false)
+            this._showError(false)
             this.button_search.setAttribute("disabled", "disabled")
             this.button_action.setAttribute("disabled", "disabled")
             this.button_action.innerHTML = "Bezig ..."
@@ -183,7 +207,6 @@ class ManageUI {
      * @returns true when the prefixes are set or false if they are rejected.
      */
     _tryPrefixes() {
-        this.showError(false)
         this.pairs_table.innerHTML = ""
         try {
             this.migrator.setPrefixes(this.source_input.value, this.target_input.value)
@@ -215,17 +238,17 @@ class ManageUI {
      * Display an error message, using the dedicated div.
      * @param msg the message to display
      */
-    showError(msg) {
+    _showError(msg) {
         if (msg == false) {
-            this.error_box.style.visibility = "hidden"
+            this.error_box.style.display = "none"
         } else {
             if (msg instanceof Error) {
                 msg = msg.message
             }
             this.error_box.innerHTML = msg
-            this.error_box.style.visibility = "initial"
+            this.error_box.style.display = "block"
         }
-    }
+    }        
 }
 
 class PrefixError extends Error {
