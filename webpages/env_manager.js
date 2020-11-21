@@ -388,20 +388,24 @@ class Migrator {
 
                 let action = null
                 if (this.action == this.ACTIONS.publish) {
-                    action = pair.switch(this.source_prefix, this.target_prefix, "Publish prepub to live environment").then(() => {
+                    action = pair.delete("target").then(() => {
+                        return pair.duplicate(this.source_prefix, this.target_prefix, "Publish prepub to live environment", true)
+                    }).then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
                         ui_callback(i, false, pair)
                     })
                 } else if (this.action == this.ACTIONS.create_prepub || this.action == this.ACTIONS.duplicate) {
-                    let summary = ""
+                    let summary        = ""
+                    let allow_indexing = null
                     if (this.action == this.ACTIONS.create_prepub) {
                         summary = `Create prepub environment from ${this.source_prefix}`
+                        allow_indexing = false
                     } else {
                         summary = `Duplicate ${this.source_prefix} environment to ${this.target_prefix}`
                     }
-                    action = pair.duplicate(this.source_prefix, this.target_prefix, summary).then(() => {
+                    action = pair.duplicate(this.source_prefix, this.target_prefix, summary, allow_indexing).then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
@@ -471,8 +475,11 @@ class Pair {
      * @param {string} source_prefix - The link prefix to rewrite
      * @param {string} target_prefix - The link prefix to rewrite source_prefix to 
      * @param {string} rewrite_summary - The page summary when performing the rewrite
+     * @param {boolean|null} [allow_indexing] - if true, remove the __NOINDEX__ magic keyword(s) from the new page, if
+     *                                          false, add it if it isn't there yet. If null, the __NOINDEX__ tags will
+     *                                          not be affected. 
      */
-    async duplicate(source_prefix, target_prefix, rewrite_summary) {
+    async duplicate(source_prefix, target_prefix, rewrite_summary, allow_indexing = null) {
         await browser.tabs.sendMessage(script_tab, {type: "wikiDuplicatePage", title: this.source_title, new_title: this.target_title})
         this.source_duplicated = true
 
@@ -484,22 +491,20 @@ class Pair {
         // Get the wikitext of the new live page
         let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: new_page_id}})
 
-        // Rewrite the links/transclusions on the live page
+        // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag
         let rewriter = new PrefixRewriter(source_prefix, target_prefix)
         let wikitext = rewriter.rewrite(text_query["wikitext"])
+        if (allow_indexing !== null) {
+            if (allow_indexing) {
+                wikitext = wikitext.replace(new RegExp(/^\s*__NOINDEX__\s*$\n/, "gm"), "") // Remove lines that only consists of __NOINDEX__, without leaving an empty line behind 
+                wikitext = wikitext.replace(new RegExp(/__NOINDEX__/, "g"), "")            // Remove __NOINDEX__ from lines that also contain other text
+            } else {
+                if (!wikitext.match("__NOINDEX__")) {
+                    wikitext = "__NOINDEX__\n" + wikitext
+                }
+            }
+        }
         await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: new_page_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
         this.target_rewritten = true
-    }
-
-    /**
-     * Convenience method to first delete the target page (if existing) and then duplicate the source page (if it 
-     * exists) to the target page.
-     * @param {string} source_prefix - The link prefix to rewrite
-     * @param {string} target_prefix - The link prefix to rewrite source_prefix to 
-     * @param {string} rewrite_summary - The page summary when performing the rewrite
-     */
-    async switch(source_prefix, target_prefix, rewrite_summary) {
-        await this.delete("target")
-        await this.duplicate(source_prefix, target_prefix, rewrite_summary)
     }
 }
