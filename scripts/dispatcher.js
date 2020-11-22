@@ -91,31 +91,57 @@ function populateIssue(url_analyzer) {
 }
 
 /**
- * On issue pages, add a button to integrate the issue into the prepub page(s).
+ * On issue pages, add a button to integrate the issue into the prepub page(s). When clicked, this will become a
+ * dropdown to select the prepub to integrate with.
  */
 function insertIntegrateIssueLink(url_analyzer) {
     let wiki_api = new WikiApi()
-    wiki_api.query({"list": "prefixsearch", "pssearch": url_analyzer.namespace + "Vprepub_", "pslimit": 500}).then(query => {
+    wiki_api.query({"list": "prefixsearch", "pssearch": url_analyzer.namespace + "Vprepub-", "pslimit": 500}).then(query => {
 
         // Create a dropdown list to choose the prepub version we want to integrate with
         let dropdown = document.createElement("select")
         
+        let versions = {} // Collect all prepub versions in this namespace and check for each version if the 
+                          // corresponding prepub page already exists (true of false)
         for (const key in query.prefixsearch) {
-            let title = query.prefixsearch[key].title
-            let title_analyzer = new TitleAnalyzer(title)
-            if (title_analyzer.title == url_analyzer.title) {
-                // If we have a prepub page that matches our title, add the version to the select box with the full
-                // title as value
-                if (title_analyzer.version) {
-                    let option = document.createElement("option")
-                    option.setAttribute("value", title)
-                    option.innerHTML = title_analyzer.version
-                    dropdown.appendChild(option)
-                } else {
-                    console.log(`Couldn't extract version number title from ${title}.`)
+            let page_title = query.prefixsearch[key].title
+            let title_analyzer = new TitleAnalyzer(page_title)
+            if (title_analyzer.version) {
+                if (title_analyzer.title == url_analyzer.title) {
+                    versions[title_analyzer.version] = true
+                } else if (!(title_analyzer.version in versions)) {
+                    versions[title_analyzer.version] = false
                 }
+            } else {
+                console.log(`Couldn't extract version number from ${page_title}.`)
             }
         }
+
+        // Add first all versions that have a corresponding prepub page and then all versions that don't to the
+        // dropdown.
+        let versions_existing = []
+        let versions_new      = []
+        Object.keys(versions).forEach(version => {
+            if (versions[version]) {
+                versions_existing.push(version)
+             } else {
+                versions_new.push(version)
+             }
+        })
+        versions_existing.sort()
+        versions_existing.forEach(version => {
+            let option = document.createElement("option")
+            option.setAttribute("value", version)
+            option.innerHTML = version
+            dropdown.appendChild(option)
+        })
+        versions_new.sort()
+        versions_new.forEach(version => {
+            let option = document.createElement("option")
+            option.setAttribute("value", version)
+            option.innerHTML = version + " (pagina bestaat nog niet)"
+            dropdown.appendChild(option)
+        })
 
         if (dropdown.childNodes.length > 0) {
             // So we have some content. Let's also add the default, empty element
@@ -127,8 +153,8 @@ function insertIntegrateIssueLink(url_analyzer) {
             // When a value is selected. the URL is changed to the edit URL of that prepub page, with the merge_issue
             // parameter set to this issue
             dropdown.addEventListener("change", event => {
-                let value = dropdown.selectedOptions[0].value
-                window.location.href = `/index.php?title=${value}&action=edit&merge_issue=${url_analyzer.issue_id}`
+                let version = dropdown.selectedOptions[0].value
+                window.location.href = `/index.php?title=${url_analyzer.namespace}Vprepub-${version}${url_analyzer.separator}${url_analyzer.title}&action=edit&merge_issue=${url_analyzer.issue_id}`
             })
 
             // Add a "merge issue" link, which will be replaced by the dropdown when clicked
@@ -151,9 +177,9 @@ function insertIntegrateIssueLink(url_analyzer) {
         } else if (url_analyzer.realm == "issue") {
             insertIntegrateIssueLink(url_analyzer)
         }
-    } else if (url_analyzer.type == "create") {
+    } else if (url_analyzer.type == "create" && url_analyzer.realm == "issue") {
         populateIssue(url_analyzer)
-    } else if (url_analyzer.type == "edit" && url_analyzer.realm == "prepub") {
+    } else if ((url_analyzer.type == "edit" || url_analyzer.type == "create") && url_analyzer.realm == "prepub") {
         let integrator = new IssueIntegrator(url_analyzer)
         integrator.integrate()
     }

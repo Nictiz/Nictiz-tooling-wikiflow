@@ -13,9 +13,10 @@ class IssueIntegrator {
 
         this.wiki_api = new WikiApi()
 
-        // Containers for the issue page information in the original and the modified state
-        this.issue_info    = null
-        this.ancestor_info = null
+        // The wikitext for the issue page and for the first revision of the wiki page, which will be used as the
+        // common ancestor.
+        this.issue_text    = null
+        this.ancestor_text = null
 
         // The textarea of the editor component
         this.textarea = document.getElementById("wpTextbox1")
@@ -180,7 +181,7 @@ class IssueIntegrator {
             this.issue_id = value
             this.textarea.setAttribute("style", "color: grey");
             this.getWikiAndAncestorTextForIssue(value).then(() => {
-                if (this.issue_info != null && this.ancestor_info != null) {
+                if (this.issue_text != null && this.ancestor_text != null) {
                     this.autoMerge()
 
                     // Enable/disable the "use diff" button
@@ -227,29 +228,35 @@ class IssueIntegrator {
     /** Get the issue text for the selected issue in the issue box, plus the
      *  common ancestor for these pages. */
     async getWikiAndAncestorTextForIssue(issue_id) {
-        this.issue_info    = null
-        this.ancestor_info = null // We could reuse a previous answer, but for now lets not make it too complex
+        this.issue_text    = null
+        this.ancestor_text = null // We could reuse a previous answer, but for now lets not make it too complex
         
         return this.wiki_api.getWikiText({page: this.url_analyzer.namespace + "Vissue-" + issue_id + this.url_analyzer.separator + this.url_analyzer.title}).then(issue_info => {
-            this.issue_info = issue_info
+            // Normalize all links and transclusions to the prepub environment
+            this.issue_text = issue_info.wikitext
+            this.issue_text = this.rewriteText(this.issue_text)
 
-            // The issue box will differ between the issue and the prepub page, so lets convert it already
-            this.issue_info.wikitext = this.rewriteText(this.issue_info.wikitext)
-        }).then(() => {
-            // Now find the the first revision of this page to reconstruct the common ancestor.
-            return this.wiki_api.query({"prop": "revisions", "rvlimit": 500, "pageids": this.issue_info["pageid"]})
-        }).then(query => {
-            let revisions = query["pages"][this.issue_info["pageid"]]["revisions"]
-            let first_revision = revisions[revisions.length - 1].revid
-            return this.wiki_api.getWikiText({oldid: first_revision})
-        }).then(ancestor_info => {
-            this.ancestor_info = ancestor_info
-            // TODO: This stuff is about issueboxes, for which we need a policy
-            if (this.url_analyzer.separator == "/") {
-                this.ancestor_info.wikitext = this.rewriteText(this.ancestor_info.wikitext)
+            return issue_info.pageid
+        }).then(issue_pageid => {
+            if (this.url_analyzer.type == "create") {
+                // When creating a new page, we don't have a common ancestor, just a blank text to diff against.
+                this.ancestor_text = ""
             } else {
-                // Temporary, I hope, to allow for merging to V2019.01
-                this.ancestor_info.wikitext = this.ancestor_info.wikitext.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
+                // Now find the the first revision of this page to reconstruct the common ancestor.
+                return this.wiki_api.query({"prop": "revisions", "rvlimit": 500, "pageids": issue_pageid}).then(query => {
+                    let revisions = query["pages"][issue_pageid]["revisions"]
+                    let first_revision = revisions[revisions.length - 1].revid
+                    return this.wiki_api.getWikiText({oldid: first_revision})
+                }).then(ancestor_info => {
+                    this.ancestor_text = ancestor_info.wikitext
+                    // TODO: This stuff is about issueboxes, for which we need a policy
+                    if (this.url_analyzer.separator == "/") {
+                        this.ancestor_text = this.rewriteText(this.ancestor_text)
+                    } else {
+                        // Temporary, I hope, to allow for merging to V2019.01
+                        this.ancestor_text = this.ancestor_text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:V2019.01_Issuebox$1}}")
+                    }
+                })
             }
         }).catch(error => console.log(error))   
     }
@@ -260,6 +267,14 @@ class IssueIntegrator {
      * and has_conflicts
      */
     autoMerge() {
+        this.has_conflicts = false
+        
+        // If we're creating a new page, we can use the issue text verbatim as the merged text
+        if (this.url_analyzer.type == "create") {
+            this.merged_text = this.issue_text
+            return
+        }
+
         // We use the node-diff library, which seems the only working solution
         // to do three-way merges in JS.
         // Unfortunately, it doesn't do exactly what we want: instead of
@@ -268,7 +283,7 @@ class IssueIntegrator {
         // To keep our whitespaces intact, we use a low granularity of
         // entire paragraphs as our atoms. This means that if there is a 
         // conflict somewhere in a paragraph, it has to be resolved manually.
-        let changes = Diff3.diff3Merge(this.orig_wikitext, this.ancestor_info["wikitext"], this.issue_info["wikitext"], {
+        let changes = Diff3.diff3Merge(this.orig_wikitext, this.ancestor_text, this.issue_text, {
             excludeFalseConflicts: true,
             stringSeparator: /\n/
         })
@@ -293,7 +308,7 @@ class IssueIntegrator {
      * left, and the content of the original situation on the right.
      */
     loadDiffEditor(merged) {
-        if (this.issue_info != null && this.ancestor_info != null) {
+        if (this.issue_text != null && this.ancestor_text != null) {
             // Hide the normal wiki editor
             let editor = document.getElementsByClassName("wikiEditor-ui-view-wikitext")[0] // The entire editor component
             editor.childNodes.forEach(child => child.style.display = "none")
@@ -308,7 +323,7 @@ class IssueIntegrator {
             let code_mirror = CodeMirror.MergeView(editor,
                 {
                     "value": merged,
-                    "origLeft": this.issue_info["wikitext"],
+                    "origLeft": this.issue_text,
                     "origRight": this.orig_wikitext,
                     "lineWrapping": true,
                     "lineNumbers": true,
@@ -319,7 +334,7 @@ class IssueIntegrator {
             let header = document.createElement("table")
             header.setAttribute("style", "width: 100%; text-align: center;")
             header.setAttribute("id", "CodeMirror-header")
-            header.innerHTML = "<tr><td style='width: 33%;'>Issue-tekst</td><td style='width: 33%;'>Nieuwe tekst</td><td style='width: 33%;'>Huidige Vprepub</td></tr>"
+            header.innerHTML = "<tr><td style='width: 33%;'>Issue-tekst</td><td style='width: 33%;'>Nieuwe tekst</td><td style='width: 33%;'>Huidige prepub</td></tr>"
             editor.insertAdjacentElement("afterbegin", header)
 
             // Mirror all changes in the CodeMirror editor to the hidden wiki editor, where it can be picked up by the

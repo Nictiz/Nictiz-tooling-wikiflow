@@ -51,6 +51,7 @@ class WikiApi {
      * Query the wikitext content for a given page.
      * @param {Object} query_key - a query key as understood by the AI "parse" action to select the specified page, with a key and a value
      * @returns {Promise<Object|Error>} - an object with the following keys:
+     *                                    - "title": the title of the page
      *                                    - "wikitext": the raw wikitext
      *                                    - "pageid": the page id
      *                                    - "revid": the id of the used revision
@@ -67,10 +68,11 @@ class WikiApi {
         }
         try {
             let wikitext = json.parse.wikitext["*"]
+            let title    = json.parse.title
             let pageid   = json.parse.pageid
             let revid    = json.parse.revid
             if (wikitext != null && pageid != null && revid != null) {
-                return {"wikitext": wikitext, "pageid": pageid, "revid": revid}
+                return {wikitext: wikitext, title: title, pageid: pageid, revid: revid}
             }
         } catch (error) {
             // One of the expected keys was not found in the response
