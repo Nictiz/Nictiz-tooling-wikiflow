@@ -1,4 +1,13 @@
 class IssueIntegrator {
+    /**
+     * Handle integration of an issue page from within a prepub page.
+     * 
+     * This involves several aspects:
+     * - finding and presenting all issue pages that could be merged to a prepub page in a dropdown
+     * - automatically merging the issue text with the text of the prepub page
+     * - offering a three-way diff view to manually resolve merge conflicts
+     * - sanity checks on the input
+     */
     constructor(url_analyzer) {
         this.url_analyzer = url_analyzer
 
@@ -313,19 +322,18 @@ class IssueIntegrator {
             header.innerHTML = "<tr><td style='width: 33%;'>Issue-tekst</td><td style='width: 33%;'>Nieuwe tekst</td><td style='width: 33%;'>Huidige Vprepub</td></tr>"
             editor.insertAdjacentElement("afterbegin", header)
 
-            // Mirror all changes in the CodeMirror editor to the hidden wiki 
-            // editor, where it can be picked up by the other functionality
-            // of the edit page. Rather crude, but it will do for now.
-            this.textarea.textContent = merged
+            // Mirror all changes in the CodeMirror editor to the hidden wiki editor, where it can be picked up by the
+            // other functionality of the edit page. Rather crude, but it will do for now.
+            let textarea = this.textarea
+            textarea.textContent = merged
             code_mirror.editor().on("change", function() {
-                this.textarea.textContent = code_mirror.editor().getValue()
+                textarea.textContent = code_mirror.editor().getValue()
             })
         }
     }
 
     /**
-     * Rewrite the wiki text so that all references specific to the issue are
-     * changed to Vprepub.
+     * Rewrite the wiki text so that all references specific to the issue are changed to the prepub environment.
      * @param text the raw wikitext to rewrite
      * @returns the rewritten wikitext
      */
@@ -333,8 +341,10 @@ class IssueIntegrator {
         // Change the issuebox from the Vissue back to the Vprepub version
         let modified = text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
 
-        // Change links and transclusions back to Vprepub
-        let rewriter = new PrefixRewriter("MedMij:Vissue-[A-Za-z0-9\-\.]+", "Vprepub", true)
+        // Change links and transclusions back to the prepub environment
+        let from = this.url_analyzer.namespace + "Vissue-" + this.issue_id
+        let to   = this.url_analyzer.namespace + "Vprepub-" + this.url_analyzer.version
+        let rewriter = new PrefixRewriter(from, to, false)
         modified = rewriter.rewrite(modified)
 
         return modified
