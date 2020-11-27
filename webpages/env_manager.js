@@ -54,25 +54,19 @@ class ManageUI {
             }
         })
 
+        this.action_button_texts = {}
+        this.action_button_texts[this.migrator.ACTIONS.publish]       = "Publiceer"
+        this.action_button_texts[this.migrator.ACTIONS.create_prepub] = "Aanmaken"
+        this.action_button_texts[this.migrator.ACTIONS.duplicate]     = "Dupliceren"
+        this.action_button_texts[this.migrator.ACTIONS.delete]        = "Verwijderen"
 
         // Attach event listeners to the radio buttons
         document.querySelectorAll("input[type='radio'][name='action']").forEach(element => {
             element.addEventListener("change", event => {
                 this.migrator.setAction(event.target.value)
                 this._tryPrefixes()
-                if (event.target.value == this.migrator.ACTIONS.publish) {
-                    this.button_action.innerHTML = "Publiceer"
-                    this.target_input.setAttribute("disabled", "disabled")
-                } else if (event.target.value == this.migrator.ACTIONS.create_prepub) {
-                    this.button_action.innerHTML = "Aanmaken"
-                    this.target_input.setAttribute("disabled", "disabled")
-                } else if (event.target.value == this.migrator.ACTIONS.duplicate) {
-                    this.button_action.innerHTML = "Dupliceren"
-                    this.target_input.removeAttribute("disabled")
-                } else if (event.target.value == this.migrator.ACTIONS.delete) {
-                    this.button_action.innerHTML = "Verwijderen"
-                    this.target_input.setAttribute("disabled", "disabled")
-                }
+                this.button_action.innerHTML = this.action_button_texts[event.target.value]
+                this.target_input.setAttribute("disabled", "disabled")
             })
         })
         document.querySelector("input[type='radio'][name='action'][value='publish_prepub']").dispatchEvent(new Event("change"))
@@ -111,6 +105,7 @@ class ManageUI {
                 })
 
                 if (this.has_permissions) {
+                    this.button_action.innerHTML = this.action_button_texts[this.migrator.action]
                     this.button_action.removeAttribute("disabled")
                 }
             }).catch(error => {
