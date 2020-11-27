@@ -46,3 +46,7 @@ tr.success {
 tr.failure {
     color: darkred
 }
+
+li.warning {
+    color: darkgoldenrod;
+}

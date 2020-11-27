@@ -64,9 +64,13 @@ class ManageUI {
         document.querySelectorAll("input[type='radio'][name='action']").forEach(element => {
             element.addEventListener("change", event => {
                 this.migrator.setAction(event.target.value)
+                if (event.target.value == this.migrator.ACTIONS.duplicate) {
+                    this.target_input.removeAttribute("disabled")
+                } else {
+                    this.target_input.setAttribute("disabled", "disabled")
+                }
                 this._tryPrefixes()
                 this.button_action.innerHTML = this.action_button_texts[event.target.value]
-                this.target_input.setAttribute("disabled", "disabled")
             })
         })
         document.querySelector("input[type='radio'][name='action'][value='publish_prepub']").dispatchEvent(new Event("change"))
@@ -172,6 +176,9 @@ class ManageUI {
                     if (proceed) {
                         if (pair.target_rewritten) {
                             message_html += "<li>links herschreven</li>"
+                            if (pair.target_contains_prefix_from) {
+                                message_html += "<li class='warning'>De nieuwe pagina bevat nog (ergens) de oorspronkelijke prefix!</li>"
+                            }
                         } else {
                             message_html += "<li>kon links niet herschrijven</li>"
                         }
@@ -464,10 +471,11 @@ class Pair {
         this.target_title = target_title
         this.target_id    = target_id
 
-        this.source_deleted    = false
-        this.target_deleted    = false
-        this.source_duplicated = false
-        this.target_rewritten  = false
+        this.source_deleted              = false
+        this.target_deleted              = false
+        this.source_duplicated           = false
+        this.target_rewritten            = false
+        this.target_contains_prefix_from = false
     }
 
     /**
@@ -523,6 +531,7 @@ class Pair {
             }
         }
         await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: new_page_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
-        this.target_rewritten = true
+        this.target_rewritten            = true
+        this.target_contains_prefix_from = rewriter.containsPrefixFrom(wikitext)
     }
 }
