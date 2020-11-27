@@ -353,8 +353,8 @@ class IssueIntegrator {
      * @returns the rewritten wikitext
      */
     rewriteText(text) {
-        // Change the issuebox from the Vissue back to the Vprepub version
-        let modified = text.replace(/{{MedMij:Vissue\/Issuebox(.*?)\|.*?}}/, "{{MedMij:Vprepub/Issuebox$1}}")
+        // Remove the warning about this being an issue page
+        let modified = text.replace(/{{IssuePaginaWaarschuwing\|.*?}}(\s*\n)?/, "")
 
         // Change links and transclusions back to the prepub environment
         let from = this.url_analyzer.namespace + "Vissue-" + this.issue_id

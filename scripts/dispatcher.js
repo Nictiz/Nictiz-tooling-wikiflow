@@ -72,13 +72,20 @@ function populateIssue(url_analyzer) {
         // Rewrite links and transclusions
         let rewriter = new PrefixRewriter(url_analyzer.namespace + source, url_analyzer.namespace + "Vprepub")
         let modified = rewriter.rewrite(production_info["wikitext"])
-        
-        // Inject __NOINDEX__
-        modified = "__NOINDEX__\n" + modified
 
-        // Modify the issuebox to link to the issue in BITS
-        modified = modified.replace(/{{" + url_analyzer.namespace + "Vprepub(_|\/)Issuebox}}/, "{{" + url_analyzer.namespace + "Vissue$1Issuebox|" + url_analyzer.issue_id + "}}") // FO
-        modified = modified.replace(/{{" + url_analyzer.namespace + "Vprepub(_|\/)Issuebox_FHIR_IG}}/, "{{" + url_analyzer.namespace + "Vissue$1Issuebox_FHIR_IG|" + url_analyzer.issue_id + "}}") // TO
+        // Make sure issue pages aren't indexed
+        if (!modified.match("__NOINDEX__")) {
+            modified = "__NOINDEX__\n" + modified
+        }
+
+        // Notify the user that this is a temporary issue page
+        let issue_box = `{{IssuePaginaWaarschuwing|${url_analyzer.issue_id}|`;
+        issue_box += url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title
+        if (url_analyzer.lang != null) {
+            issue_box += "|lang=" + url_analyzer.lang
+        }
+        issue_box += "}}\n"
+        modified = issue_box + modified
 
         document.getElementById("wpTextbox1").textContent = modified
         document.getElementById("wpSummary").setAttribute("value", "Clone of " + source + " production page for issue " + url_analyzer.issue_id)
@@ -107,7 +114,7 @@ function insertIntegrateIssueLink(url_analyzer) {
             let page_title = query.prefixsearch[key].title
             let title_analyzer = new TitleAnalyzer(page_title)
             if (title_analyzer.version) {
-                if (title_analyzer.title == url_analyzer.title) {
+                if (title_analyzer.title == url_analyzer.title && title_analyzer.separator == url_analyzer.separator) {
                     versions[title_analyzer.version] = true
                 } else if (!(title_analyzer.version in versions)) {
                     versions[title_analyzer.version] = false
