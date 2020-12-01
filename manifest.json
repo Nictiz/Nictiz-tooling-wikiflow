@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "WikiFlow",
     "author": "Pieter Edelman",
-    "version": "0.6.1",
+    "version": "0.7.0",
     "description": "Some automation for the Wiki workflow",
     "icons": {
         "48": "icons/icon-48.png",
