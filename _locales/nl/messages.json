@@ -1,0 +1,8 @@
+{
+    "extension_name": {
+        "message": "WikiFlow"
+    },
+    "extension_description": {
+        "message": "Nictiz-eigen tooling om een pseudo-Gitflow-werkwijze op de Informatiestandaarden-wiki te implementeren."
+    }
+}

@@ -1,9 +1,11 @@
 {
     "manifest_version": 2,
-    "name": "WikiFlow",
+    "default_locale": "nl",
+
+    "name": "__MSG_extension_name__",
+    "description": "__MSG_extension_description__",
     "author": "Pieter Edelman",
     "version": "0.7.1",
-    "description": "Some automation for the Wiki workflow",
     "icons": {
         "48": "icons/icon-48.png",
         "96": "icons/icon-96.png"
