@@ -9,3 +9,8 @@
 div#p-views li select {
     height: 100%;
 }
+
+span.edit-transclusion {
+    font-style: italic;
+    text-decoration: underline dotted;
+}

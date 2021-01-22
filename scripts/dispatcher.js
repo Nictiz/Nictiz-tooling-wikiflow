@@ -176,6 +176,41 @@ function insertIntegrateIssueLink(url_analyzer) {
     })
 }
 
+/**
+ * If text is from a transcluded page, Mediawiki will automatically and silently redirect the edit links to this page.
+ * This has many issues when editing in issue and prepub environments, eg:
+ * - Transclusions for issue pages default to prepub, but you don't want to edit prepub pages.
+ * - Transclusions could be redirected to issue pages, but the issue page might not exist yet.
+ * - What to do with transclusions from other environments.
+ * 
+ * So instead, all edit links that would redirect to a transcluded page are disabled and replaced by a warning.
+ */
+function rewriteTranscludedLinks(url_analyzer) {
+    // Construct the title for _this_ page
+    let target_title = ""
+    if (url_analyzer.realm == "issue") {
+        target_title = url_analyzer.namespace + "Vissue-" + url_analyzer.issue_id + url_analyzer.separator + url_analyzer.title
+    } else if (url_analyzer.realm == "prepub") {
+        target_title = url_analyzer.namespace + "Vprepub-" + url_analyzer.version + url_analyzer.separator + url_analyzer.title
+    } else {
+        return
+    }
+
+    // Rewrite all edit links where the target title is different
+    document.querySelectorAll("span.mw-editsection a").forEach(link => {
+        if (link.href) {
+            let params = new URL(link.href).searchParams
+            if (params.has("title") && params.get("title") != target_title) {
+                let replacement = document.createElement("span")
+                replacement.setAttribute("class", "edit-transclusion")
+                replacement.setAttribute("title", "This text is on a transcluded page. You need to create and edit the issue page for this transcluded page.")
+                replacement.textContent = "editing disabled"
+                link.parentElement.replaceChild(replacement, link)
+            }
+        }
+    })
+}
+
 (function() {
     let url_analyzer = new URLAnalyzer()
     if (url_analyzer.type == "read") {
@@ -183,6 +218,9 @@ function insertIntegrateIssueLink(url_analyzer) {
             insertNewIssueLink(url_analyzer)
         } else if (url_analyzer.realm == "issue") {
             insertIntegrateIssueLink(url_analyzer)
+            rewriteTranscludedLinks(url_analyzer)
+        } else if (url_analyzer.realm == "prepub") {
+            rewriteTranscludedLinks(url_analyzer)
         }
     } else if (url_analyzer.type == "create" && url_analyzer.realm == "issue") {
         populateIssue(url_analyzer)

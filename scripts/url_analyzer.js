@@ -78,7 +78,7 @@ class TitleAnalyzer {
  * - type: "read" for regular pages, "create" for pages that are being created, or "edit" for pages that are being 
  *         edited
  * - search_params: the URLSearchParameters object for this URL. Will only be set when type is "create" or "edit".
- * - plus all the fiels from TitleAnalyzer.
+ * - plus all the fields from TitleAnalyzer.
  * 
  * @param {string} [url = the current URL] - The url to analyze.
  */
