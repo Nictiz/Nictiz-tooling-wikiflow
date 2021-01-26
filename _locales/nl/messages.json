@@ -4,5 +4,119 @@
     },
     "extension_description": {
         "message": "Nictiz-eigen tooling om een pseudo-Gitflow-werkwijze op de Informatiestandaarden-wiki te implementeren."
+    },
+    "NewIssue": {
+        "message": "Nieuw issue"
+    },
+    "IssueNumber": {
+        "message": "Issuenummer"
+    },
+    "InvalidIssueNumber": {
+        "message": "Ongeldig issuenummer!"
+    },
+    "PageDoesntExistYet": {
+        "message": "pagina bestaat nog niet"
+    },
+    "SelectPrepubVersion": {
+        "message": "Selecteer prepub-versie"
+    },
+    "IntegrateChanges": {
+        "message": "Integreer aanpassingen"
+    },
+    "DescriptionTooShort": {
+        "message": "De samenvatting is erg kort. Weet je zeker dat je wil doorgaan?"
+    },
+    "DescriptionMissesIssueNumber": {
+        "message": "De samenvatting begint niet met het issue-nummer. Weet je zeker dat je wil doorgaan?"
+    },
+    "IntegrateIssuePage": {
+        "message": "Integreer issue-pagina"
+    },
+    "UseTheDiffTool": {
+        "message": "Gebruik de diff-tool"
+    },
+    "IssueText": {
+        "message": "Issue-tekst"
+    },
+    "NewText": {
+        "message": "Nieuwe tekst"
+    },
+    "CurrentPrepub": {
+        "message": "Huidige prepub"
+    },
+    "PleaseWait": {
+        "message": "Even geduld aub ..."
+    },
+    "LoggedInAs": {
+        "message": "Ingelogd als"
+    },
+    "NotLoggedIn": {
+        "message": "Niet ingelogd"
+    },
+    "InsufficientPermissions": {
+        "message": "Onvoldoende rechten om bewerkingen te kunnen uitvoeren"
+    },
+    "envPublish": {
+        "message": "Publiceer"
+    },
+    "envCreate": {
+        "message": "Aanmaken"
+    },
+    "envDuplicate": {
+        "message": "Dupliceren"
+    },
+    "envRemove": {
+        "message": "Verwijderen"
+    },
+    "Replaces": {
+        "message": "vervangt"
+    },
+    "WillBePublishedAs": {
+        "message": "wordt gepubliceerd als"
+    },
+    "ToRemove": {
+        "message": "wordt verwijderd"
+    },
+    "PagesExistInTargetEnvironment": {
+        "message": "Er bestaan al pagina's in de doelomgeving"
+    },
+    "Busy": {
+        "message": "Bezig ..."
+    },
+    "PageIsRemoved": {
+        "message": "pagina is verwijderd"
+    },
+    "CouldntRemovePage": {
+        "message": "kon pagina niet verwijderen"
+    },
+    "OriginalPageRemoved": {
+        "message": "oorspronkelijke pagina verwijderd"
+    },
+    "CouldntRemoveOriginalPage": {
+        "message": "kon oorspronkelijke pagina niet verwijderen"
+    },
+    "SourcePageDuplicatedTo": {
+        "message": "bronpagina gedupliceerd naar"
+    },
+    "CouldntDuplicateSourcePage": {
+        "message": "kon bronpagina niet dupliceren"
+    },
+    "LinksAreRewritten": {
+        "message": "links herschreven"
+    },
+    "warnTargetContainsPrefix": {
+        "message": "De nieuwe pagina bevat nog (ergens) de oorspronkelijke prefix!"
+    },
+    "CouldntRewriteLinks": {
+        "message": "kon links niet herschrijven"
+    },
+    "Ready": {
+        "message": "Gereed"
+    },
+    "InvalidPrefixForPrepub": {
+        "message": "Geen valide prefix voor prepub-omgevingen"
+    },
+    "PrefixIsAlreadyPrepub": {
+        "message": "Prefix is al een prepub-omgeving"
     }
 }

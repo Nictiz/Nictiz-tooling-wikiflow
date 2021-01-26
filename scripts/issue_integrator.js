@@ -34,9 +34,9 @@ class IssueIntegrator {
             if (this.issue_id != null) {
                 let proceed = true
                 if (summary.length < 10) {
-                    proceed = confirm("De samenvatting is erg kort. Weet je zeker dat je wil doorgaan?")
+                    proceed = confirm(browser.i18n.getMessage("DescriptionTooShort"))
                 } else if (!summary.startsWith(this.issue_id)) {
-                    proceed = confirm("De samenvatting begint niet met het issue-nummer. Weet je zeker dat je wil doorgaan?")
+                    proceed = confirm(browser.i18n.getMessage("DescriptionMissesIssueNumber"))
                 }
                 if (!proceed) {
                     event.preventDefault()
@@ -135,7 +135,7 @@ class IssueIntegrator {
             // Attach a label
             let dropdown_label = document.createElement("label")
             dropdown_label.setAttribute("for", "issue_dropdown")
-            dropdown_label.innerHTML = "Integreer issue-pagina:"
+            dropdown_label.innerHTML = browser.i18n.getMessage("IntegrateIssuePage") + ":"
             let div = document.createElement("div")
             div.appendChild(dropdown_label)
             div.appendChild(dropdown)
@@ -158,7 +158,7 @@ class IssueIntegrator {
             // Attach a label
             this.threeway_label = document.createElement("label")
             this.threeway_label.setAttribute("for", "threeway_check")
-            this.threeway_label.innerHTML = "Gebruik de diff-tool"
+            this.threeway_label.innerHTML = browser.i18n.getMessage("UseTheDiffTool")
             div.appendChild(this.threeway_check)
             div.appendChild(this.threeway_label)
 
@@ -334,7 +334,7 @@ class IssueIntegrator {
             let header = document.createElement("table")
             header.setAttribute("style", "width: 100%; text-align: center;")
             header.setAttribute("id", "CodeMirror-header")
-            header.innerHTML = "<tr><td style='width: 33%;'>Issue-tekst</td><td style='width: 33%;'>Nieuwe tekst</td><td style='width: 33%;'>Huidige prepub</td></tr>"
+            header.innerHTML = "<tr><td style='width: 33%;'>" + browser.i18n.getMessage("IssueText") + "</td><td style='width: 33%;'>" + browser.i18n.getMessage("NewText") + "</td><td style='width: 33%;'>" + browser.i18n.getMessage("CurrentPrepub") + "</td></tr>"
             editor.insertAdjacentElement("afterbegin", header)
 
             // Mirror all changes in the CodeMirror editor to the hidden wiki editor, where it can be picked up by the

@@ -43,22 +43,22 @@ class ManageUI {
         }).then(result => {
             let user_box = document.getElementById("user_box")
             if (result.userinfo.id != "0") {
-                user_box.innerHTML = `Ingelogd als ${result.userinfo.name}`
+                user_box.innerHTML = browser.i18n.getMessage("LoggedInAs") + result.userinfo.name
             } else {
-                user_box.innerHTML = "Niet ingelogd"
+                user_box.innerHTML = browser.i18n.getMessage("NotLoggedIn")
             }
             if (result.userinfo.id == "0" || !"delete" in result.userinfo.rights && !"duplicate" in result.userinfo.rights) {
-                this._showError("Onvoldoende rechten om bewerkingen te kunnen uitvoeren")
+                this._showError(browser.i18n.getMessage("InsufficientPermissions"))
             } else {
                 this.has_permissions = true
             }
         })
 
         this.action_button_texts = {}
-        this.action_button_texts[this.migrator.ACTIONS.publish]       = "Publiceer"
-        this.action_button_texts[this.migrator.ACTIONS.create_prepub] = "Aanmaken"
-        this.action_button_texts[this.migrator.ACTIONS.duplicate]     = "Dupliceren"
-        this.action_button_texts[this.migrator.ACTIONS.delete]        = "Verwijderen"
+        this.action_button_texts[this.migrator.ACTIONS.publish]       = browser.i18n.getMessage("envPublish")
+        this.action_button_texts[this.migrator.ACTIONS.create_prepub] = browser.i18n.getMessage("envCreate")
+        this.action_button_texts[this.migrator.ACTIONS.duplicate]     = browser.i18n.getMessage("envDuplicate")
+        this.action_button_texts[this.migrator.ACTIONS.delete]        = browser.i18n.getMessage("envRemove")
 
         // Attach event listeners to the radio buttons
         document.querySelectorAll("input[type='radio'][name='action']").forEach(element => {
@@ -89,20 +89,20 @@ class ManageUI {
                     if (this.migrator.action == this.migrator.ACTIONS.publish) {
                         if (pair.source_title) {
                             if (pair.target_id) {
-                                inner_html += `<td>${pair.source_title}</td><td>vervangt</td><td>${pair.target_title}</td>`
+                                inner_html += `<td>${pair.source_title}</td><td>` + browser.i18n.getMessage("Replaces") + `</td><td>${pair.target_title}</td>`
                             } else {
-                                inner_html += `<td>${pair.source_title}</td><td>wordt gepubliceerd als</td><td>${pair.target_title}</td>`
+                                inner_html += `<td>${pair.source_title}</td><td>` + browser.i18n.getMessage("WillBePublishedAs") + `</td><td>${pair.target_title}</td>`
                             }
                         } else {
-                            inner_html += `<td></td><td>wordt verwijderd:</td><td>${pair.target_title}</td>`
+                            inner_html += "<td></td><td>" + browser.i18n.getMessage("ToRemove") + `:</td><td>${pair.target_title}</td>`
                         }
                     } else if (this.migrator.action == this.migrator.ACTIONS.create_prepub || this.migrator.action == this.migrator.ACTIONS.duplicate) {
                         if (pair.target_id) {
-                            throw "Er bestaan al pagina's in de doelomgeving"
+                            throw browser.i18n.getMessage("PagesExistInTargetEnvironment")
                         }
-                        inner_html += `<td>${pair.source_title}</td><td>wordt gedupliceerd als</td><td>${pair.target_title}</td>`
+                        inner_html += `<td>${pair.source_title}</td><td>` + browser.i18n.getMessage("WillBePublishedAs") + `:</td><td>${pair.target_title}</td>`
                     } else if (this.migrator.action == this.migrator.ACTIONS.delete) {
-                        inner_html += `<td>${pair.source_title}</td><td>wordt verwijderd</td>`
+                        inner_html += `<td>${pair.source_title}</td><td>` + browser.i18n.getMessage("ToRemove") + "</td>"
                     }
                     tr.innerHTML = inner_html
                     this.pairs_table.appendChild(tr)
@@ -122,7 +122,7 @@ class ManageUI {
             this._showError(false)
             this.button_search.setAttribute("disabled", "disabled")
             this.button_action.setAttribute("disabled", "disabled")
-            this.button_action.innerHTML = "Bezig ..."
+            this.button_action.innerHTML = browser.i18n.getMessage("Busy")
 
             // Construct a list of indexes which should be included/excluded from the checkboxes in the pairs table.
             let active_indexes = []
@@ -144,9 +144,9 @@ class ManageUI {
 
                 if (this.migrator.action == this.migrator.ACTIONS.delete) {
                     if (is_successful) {
-                        message_html = "pagina is verwijderd"
+                        message_html = browser.i18n.getMessage("PageIsRemoved")
                     } else {
-                        message_html = "kon pagina niet verwijderen"
+                        message_html = browser.i18n.getMessage("CouldntRemovePage")
                     }
                 } else {
                     // These operations consist of multiple steps, so we build a list of steps that have
@@ -157,30 +157,30 @@ class ManageUI {
                     if (this.migrator.action == this.migrator.ACTIONS.publish) {
                         if (pair.target_id) {
                             if (pair.target_deleted) {
-                                message_html += "<li>oorspronkelijke pagina verwijderd</li>"
+                                message_html += "<li>" + browser.i18n.getMessage("OriginalPageRemoved") + "</li>"
                             } else {
-                                message_html += "<li>kon oorspronkelijke pagina niet verwijderen</li>"
+                                message_html += "<li>"+ browser.i18n.getMessage("CouldntRemoveOriginalPage") + "</li>"
                                 proceed = false
                             }
                         }
                     }
                     if (proceed) {
                         if (pair.source_duplicated) {
-                            message_html += `<li>bronpagina gedupliceerd naar ${pair.target_title}</li>`
+                            message_html += "<li>" + browser.i18n.getMessage("SourcePageDuplicatedTo") + pair.target_title + "</li>"
                         } else {
-                            message_html += "<li>kon bronpagina niet dupliceren</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntDuplicateSourcePage") + "</li>"
                             proceed = false
                         }
                     }
             
                     if (proceed) {
                         if (pair.target_rewritten) {
-                            message_html += "<li>links herschreven</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("LinksAreRewritten") + "</li>"
                             if (pair.target_contains_prefix_from) {
-                                message_html += "<li class='warning'>De nieuwe pagina bevat nog (ergens) de oorspronkelijke prefix!</li>"
+                                message_html += "<li class='warning'>" + browser.i18n.getMessage("warnTargetContainsPrefix") + "</li>"
                             }
                         } else {
-                            message_html += "<li>kon links niet herschrijven</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntRewriteLinks") + "</li>"
                         }
                     }
 
@@ -197,7 +197,7 @@ class ManageUI {
                 tr.innerHTML = inner_html
             }).then(() => {
                 this.button_search.removeAttribute("disabled")
-                this.button_action.innerHTML = "Gereed"
+                this.button_action.innerHTML = browser.i18n.getMessage("Ready")
             })
         })
     }
@@ -323,13 +323,13 @@ class Migrator {
 
             if (this.action == this.ACTIONS.publish) {
                 if (parts[2] == null) {
-                    throw new PrefixError("source", "Geen valide prefix voor prepub-omgevingen")
+                    throw new PrefixError("source", browser.i18n.getMessage("InvalidPrefixForPrepub"))
                 }
                 this.source_prefix = source_prefix
                 this.target_prefix = parts[1] + "V" + parts[3]
             } else if (this.action == this.ACTIONS.create_prepub) {
                 if (parts[2] != null) {
-                    throw new PrefixError("source", "Prefix is al een prepub-omgeving")
+                    throw new PrefixError("source", browser.i18n.getMessage("PrefixIsAlreadyPrepub"))
                 }
                 this.source_prefix = source_prefix
                 this.target_prefix = parts[1] + "Vprepub-" + parts[3]

@@ -11,9 +11,9 @@
  */
 function insertNewIssueLink(url_analyzer) {
     let new_issue_link = document.createElement("li")
-    new_issue_link.innerHTML = "<span><a>Nieuw issue</a></span>"
+    new_issue_link.innerHTML = "<span><a>" + browser.i18n.getMessage("NewIssue") + "</a></span>"
     new_issue_link.onclick = function() {
-        let issue_num = prompt("Issuenummer:", "MM-")
+        let issue_num = prompt(browser.i18n.getMessage("IssueNumber") + ":", "MM-")
         if (issue_num != null) {
             if (issue_num.match(/^[A-Za-z0-9\-\.]+$/)) {
                 let href = "/index.php?title="
@@ -22,7 +22,7 @@ function insertNewIssueLink(url_analyzer) {
                 href += "&action=edit&source=" + url_analyzer.version
                 window.location.href = href
             } else {
-                alert("Ongeldig issuenummer!")
+                alert(browser.i18n.getMessage("InvalidIssueNumber"))
             }
         }
     }
@@ -57,7 +57,7 @@ function populateIssue(url_analyzer) {
     grayout.style.opacity = "0.75"
     grayout.style.zIndex = "99999"
     let wait = document.createElement("p")
-    wait.innerHTML = "Please wait ..."
+    wait.innerHTML = browser.i18n.getMessage("PleaseWait")
     wait.style.fontSize = "500%"
     wait.style.width = "100%"
     wait.style.textAlign = "center"
@@ -146,7 +146,7 @@ function insertIntegrateIssueLink(url_analyzer) {
         versions_new.forEach(version => {
             let option = document.createElement("option")
             option.setAttribute("value", version)
-            option.innerHTML = version + " (pagina bestaat nog niet)"
+            option.innerHTML = version + " (" + browser.i18n.getMessage("PageDoesntExistYet") + ")"
             dropdown.appendChild(option)
         })
 
@@ -154,7 +154,7 @@ function insertIntegrateIssueLink(url_analyzer) {
             // So we have some content. Let's also add the default, empty element
             let empty = document.createElement("option")
             empty.setAttribute("selected", "selected")
-            empty.innerHTML = "Selecteer prepub-versie"
+            empty.innerHTML = browser.i18n.getMessage("SelectPrepubVersion")
             dropdown.insertAdjacentElement("afterbegin", empty)
 
             // When a value is selected. the URL is changed to the edit URL of that prepub page, with the merge_issue
@@ -166,7 +166,7 @@ function insertIntegrateIssueLink(url_analyzer) {
 
             // Add a "merge issue" link, which will be replaced by the dropdown when clicked
             let merge_issue_link = document.createElement("li")
-            merge_issue_link.innerHTML = "<span><a>Integreer aanpassingen</a></span>"
+            merge_issue_link.innerHTML = "<span><a>" + browser.i18n.getMessage("IntegrateChanges") + "</a></span>"
             merge_issue_link.onclick = function() {
                 merge_issue_link.innerHTML = ""
                 merge_issue_link.appendChild(dropdown)
