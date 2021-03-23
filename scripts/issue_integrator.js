@@ -47,13 +47,17 @@ class IssueIntegrator {
     }
 
     integrate() {
-        this.wiki_api.query({"prop": "info", "titles": this.url_analyzer.namespace + this.url_analyzer.title}).then(result => {
-            try {
-                return result["pages"]["-1"]["ns"]
-            } catch (error) {
-                console.log(error)
-                throw new Error("Namespace couldn't be found")
+        // Page might not exists, so we can't query the page properties to find the namespace id. Instead we have to 
+        // query all namespace and find the one that matches our name.
+        this.wiki_api.query({"meta": "siteinfo", "siprop": "namespaces"}).then(result => {
+            let target_ns = this.url_analyzer.namespace.replace(":", "")
+            for (const key in result["namespaces"]) {
+                let ns_info = result["namespaces"][key]
+                if (ns_info["canonical"] == target_ns) {
+                    return ns_info["id"]
+                }
             }
+            throw new Error("Namespace couldn't be found")
         }).then(namespace_id => {
             return this.extractIssueIdsFromSiteInfo(namespace_id)
         }).then(issue_ids => {
