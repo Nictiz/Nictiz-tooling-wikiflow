@@ -29,6 +29,7 @@ class ManageUI {
 
         this.button_search = document.getElementById("button_search")
         this.button_action = document.getElementById("button_action")
+        this.button_toggle = document.getElementById("button_toggle")
 
         this.error_box = document.getElementById("error")
         this.pairs_table = document.getElementById("pairs_table")
@@ -75,9 +76,16 @@ class ManageUI {
         })
         document.querySelector("input[type='radio'][name='action'][value='publish_prepub']").dispatchEvent(new Event("change"))
 
+        this.button_toggle.addEventListener("click", event => {
+            document.querySelectorAll('table#pairs_table input[type=checkbox]').forEach(checkbox => 
+                checkbox.checked = !checkbox.checked
+            )
+        })
+
         // Event listener for the search button
         button_search.addEventListener("click", (event) => {
             this.pairs_table.innerHTML = ""
+            this.button_toggle.setAttribute("disabled", "disabled")
         
             this.migrator.collectPages().then(pairs => {
                 // Display each found pair in the pairs table on its own row, together with a checkbox to include or
@@ -107,6 +115,9 @@ class ManageUI {
                     tr.innerHTML = inner_html
                     this.pairs_table.appendChild(tr)
                 })
+                if (pairs.length > 0) {
+                    this.button_toggle.removeAttribute("disabled")
+                }
 
                 if (this.has_permissions) {
                     this.button_action.innerHTML = this.action_button_texts[this.migrator.action]
@@ -210,6 +221,7 @@ class ManageUI {
      */
     _tryPrefixes() {
         this.pairs_table.innerHTML = ""
+        this.button_toggle.setAttribute("disabled", "disabled")
         try {
             this.migrator.setPrefixes(this.source_input.value, this.target_input.value)
             this.source_input.setCustomValidity("")
