@@ -44,7 +44,7 @@ class ManageUI {
         }).then(result => {
             let user_box = document.getElementById("user_box")
             if (result.userinfo.id != "0") {
-                user_box.innerHTML = browser.i18n.getMessage("LoggedInAs") + result.userinfo.name
+                user_box.innerHTML = browser.i18n.getMessage("LoggedInAs") + " " + result.userinfo.name
             } else {
                 user_box.innerHTML = browser.i18n.getMessage("NotLoggedIn")
             }
