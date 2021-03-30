@@ -39,9 +39,11 @@ function populateIssue(url_analyzer) {
     if (url_analyzer.type != "create") return
 
     // Figure out which page to branch off using the "source" parameter
-    let source = null
+    let source_naked = null
+    let source       = null
     if (url_analyzer.search_params.has("source")) {
-        source = "V" + url_analyzer.search_params.get("source")
+        source_naked = url_analyzer.search_params.get("source")
+        source       = "V" + source_naked
     } else {
         return
     }
@@ -70,7 +72,7 @@ function populateIssue(url_analyzer) {
     let production_query = {page: url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title}
     wiki_api.getWikiText(production_query).then(production_info => {
         // Rewrite links and transclusions
-        let rewriter = new PrefixRewriter(url_analyzer.namespace + source + url_analyzer.separator, url_analyzer.namespace + "Vprepub-" + source + url_analyzer.separator)
+        let rewriter = new PrefixRewriter(url_analyzer.namespace + source + url_analyzer.separator, url_analyzer.namespace + "Vprepub-" + source_naked + url_analyzer.separator)
         let modified = rewriter.rewrite(production_info["wikitext"])
 
         // Make sure issue pages aren't indexed
