@@ -51,10 +51,10 @@ class WikiApi {
      * Query the wikitext content for a given page.
      * @param {Object} query_key - a query key as understood by the AI "parse" action to select the specified page, with a key and a value
      * @returns {Promise<Object|Error>} - an object with the following keys:
-     *                                    - "title": the title of the page
-     *                                    - "wikitext": the raw wikitext
-     *                                    - "pageid": the page id
-     *                                    - "revid": the id of the used revision
+     *                                  - "title": the title of the page
+     *                                  - "wikitext": the raw wikitext
+     *                                  - "pageid": the page id
+     *                                  - "revid": the id of the used revision
      */
     async getWikiText(query_key) {
         // Build upon the query key object to construct the query payload
@@ -140,6 +140,28 @@ class WikiApi {
             return json["move"]
         }
         throw new Error(`Failed to move page with page id ${page_id}. Response was: "${JSON.stringify(json)}"`)
+    }
+
+    /**
+     * Protect a page by id (or remove its protections)
+     * @param {number} page_id - The id of the page to protect
+     * @param {string} protections - The protections to set -- see the documentation on the MediaWiki API for format 
+     * @param {string} reason - The reason this page is protected
+     * @returns {Promise<Object|Error>} - On success, an Object is returned containt the "protect" output from the api
+     */
+    async protectPage(page_id, protections, reason) {
+        let token = await this._getToken()
+        let json = await this._postJSON({
+            action:      "protect",
+            pageid:      page_id,
+            protections: protections,
+            reason:      reason,
+            token:       token
+        })
+        if ("protect" in json) {
+            return json["protect"]
+        }
+        throw new Error(`Failed to protect page with page id ${page_id}. Response was: "${JSON.stringify(json)}"`)
     }
 
     /**

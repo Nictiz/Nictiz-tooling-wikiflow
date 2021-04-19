@@ -428,6 +428,8 @@ class Migrator {
                     action = pair.delete("target").then(() => {
                         return pair.duplicate(this.source_prefix, this.target_prefix, "Publish prepub to live environment", true)
                     }).then(() => {
+                        return pair.protect("duplicated")
+                    }).then(() => {
                         ui_callback(i, true, pair)
                     }).catch(err => {
                         console.log(err)
@@ -468,9 +470,9 @@ class Pair {
      * A pair of a source page and a target page, with title and id. All of these fields are optional depending on
      * the required action and obtained values.
      *
-     * The methods delete(), duplicate() and switch() can be used to manipulate the actual pages. These operations
-     * may consist of several substeps. The status of each substep is captured in a flag. See the documention on these
-     * methods.
+     * The methods delete(), duplicate(), switch() and protect() can be used to manipulate the actual pages. These
+     * operations may consist of several substeps. The status of each substep is captured in a flag. See the 
+     * documention on these methods.
      * 
      * @param {string} [source_title] - The title of the source page. If null, there is no source page.
      * @param {number} [source_id] - The page id of the source page. If null, the page doesn't actually exist.
@@ -478,10 +480,11 @@ class Pair {
      * @param {number} [target_id] - The page id of the target page. If null, the page doesn't exist.
      */
     constructor(source_title, source_id, target_title, target_id) {
-        this.source_title = source_title
-        this.source_id    = source_id
-        this.target_title = target_title
-        this.target_id    = target_id
+        this.source_title  = source_title
+        this.source_id     = source_id
+        this.target_title  = target_title
+        this.target_id     = target_id
+        this.duplicated_id = null
 
         this.source_deleted              = false
         this.target_deleted              = false
@@ -524,10 +527,10 @@ class Pair {
         // Get the id of the new live page
         let payload = {"titles": this.target_title}
         let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
-        let new_page_id = Object.keys(id_query["pages"])[0]
+        this.duplicated_id = Object.keys(id_query["pages"])[0]
 
         // Get the wikitext of the new live page
-        let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: new_page_id}})
+        let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: this.duplicated_id}})
 
         // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag
         let rewriter = new PrefixRewriter(source_prefix, target_prefix)
@@ -542,8 +545,32 @@ class Pair {
                 }
             }
         }
-        await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: new_page_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
+        await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: this.duplicated_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
         this.target_rewritten            = true
         this.target_contains_prefix_from = rewriter.containsPrefixFrom(wikitext)
+    }
+
+    /**
+     * Protect a page which is part of this pair.
+     * @param {string} which - Either "source", "target" or "duplicated". An action is only performed when the
+     *                         corresponding page id is set 
+     */
+    async protect(which) {
+        let page_id = null
+        if (which == "source" && this.source_id != null) {
+            page_id = this.source_id
+        } else if (which == "target" && this.target_id != null) {
+            page_id = this.target_id
+        } else if (which == "duplicated" && this.duplicated_id != null) {
+            page_id = this.duplicated_id
+        }
+        if (page_id != null) {
+            await browser.tabs.sendMessage(script_tab, {
+                type: "wikiProtect",
+                page_id: page_id,
+                protections: "edit=sysop|move=sysop",
+                reason: "Protect production page from accidental edits"
+            })
+        }
     }
 }
