@@ -19,6 +19,9 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         return wiki_api.changePageText(message.page_id, message.new_text, message.summary, message.is_minor)
     } else if (message.type == "wikiDuplicatePage") {
         return wiki_api.duplicatePage(message.title, message.new_title)
+    } else if (message.type == "wikiProtect") {
+        return wiki_api.protectPage(message.page_id, message.protections, message.reason)
     }
+
 })
   

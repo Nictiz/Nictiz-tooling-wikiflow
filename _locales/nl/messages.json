@@ -110,6 +110,12 @@
     "CouldntRewriteLinks": {
         "message": "kon links niet herschrijven"
     },
+    "NewPageProtected": {
+        "message": "nieuwe pagina is beschermd"
+    },
+    "CouldntProtectNewPage": {
+        "message": "kon nieuwe pagina niet beschermen"
+    },
     "Ready": {
         "message": "Gereed"
     },
