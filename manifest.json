@@ -5,7 +5,7 @@
     "name": "__MSG_extension_name__",
     "description": "__MSG_extension_description__",
     "author": "Pieter Edelman",
-    "version": "0.8.0",
+    "version": "0.8.1",
     "icons": {
         "48": "icons/icon-48.png",
         "96": "icons/icon-96.png"
