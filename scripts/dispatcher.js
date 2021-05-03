@@ -26,7 +26,7 @@ function insertNewIssueLink(url_analyzer) {
             }
         }
     }
-    document.getElementById("ca-edit").insertAdjacentElement("afterend", new_issue_link)
+    document.getElementById("ca-history").insertAdjacentElement("beforebegin", new_issue_link)
 }
 
 /**
