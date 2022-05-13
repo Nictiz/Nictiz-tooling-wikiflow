@@ -10,22 +10,83 @@
  * @param {URLAnalyzer} url_analyzer - The URLAnalyzer object for this page
  */
 function insertNewIssueLink(url_analyzer) {
-    let new_issue_link = document.createElement("li")
-    new_issue_link.innerHTML = "<span><a>" + browser.i18n.getMessage("NewIssue") + "</a></span>"
-    new_issue_link.onclick = function() {
-        let issue_num = prompt(browser.i18n.getMessage("IssueNumber") + ":", "MM-")
-        if (issue_num != null) {
-            if (issue_num.match(/^[A-Za-z0-9\-\.]+$/)) {
-                let href = "/index.php?title="
-                href += url_analyzer.namespace + "Vissue-" + issue_num
-                href += url_analyzer.separator + url_analyzer.title
-                href += "&action=edit&source=" + url_analyzer.version
-                window.location.href = href
-            } else {
-                alert(browser.i18n.getMessage("InvalidIssueNumber"))
+    // Create (hidden) dialog in HTML
+    document.body.insertAdjacentHTML("beforeend", "<dialog id='new_issue_dialog'> \
+        <form method='dialog'> \
+        <label for='issue_num'>" + browser.i18n.getMessage("NewIssueID") + ": </label> \
+        <input type='text' id='issue_id' placeholder='MM-' size='10'/><br />\
+        <input type='checkbox' id='no_bits_checkbox'/> \
+        <label for='bits_checkbox'>" + browser.i18n.getMessage("NotOnBITS") + "</label>\
+        <span id='issue_url_div' style='display: none'> \
+            <label for='issue_url' id='issue_url_label'>" + browser.i18n.getMessage("butOnURL") + ": </label> \
+            <input type='url' id='issue_url' size='40'/>\
+        </span> \
+        <br /><input type='checkbox' id='create_blank_checkbox'/> \
+        <label for='create_blank_checkbox'>" + browser.i18n.getMessage("CreateEmptyPage") + "</label>\
+        <span id='blank_page_div' style='display: none'> \
+            <label for='blank_page_title' size='40'>" + browser.i18n.getMessage("withTitle") + ": </label> \
+            <input type='text' id='blank_page_title'>\
+        </span> \
+        <br /><button id='new_issue_ok'>Ok</button> \
+    </form> \
+</dialog>")
+    // Add event listeners to the dialog
+    document.getElementById('no_bits_checkbox').addEventListener('change', event => {
+        let issue_url_div = document.getElementById('issue_url_div')
+        if (event.target.checked) {
+            issue_url_div.style.display = 'inline'
+        } else {
+            issue_url_div.style.display = 'none'
+        }
+    })
+    document.getElementById('create_blank_checkbox').addEventListener('change', event => {
+        let title_input_div = document.getElementById('blank_page_div')
+        if (event.target.checked) {
+            title_input_div.style.display = 'inline'
+        } else {
+            title_input_div.style.display = 'none'
+        }
+    })
+
+    document.getElementById('new_issue_ok').onclick = function() {
+        let issue_id = document.getElementById('issue_id').value
+        let create_blank = document.getElementById('create_blank_checkbox').checked
+        let title
+        if (create_blank) {
+            title = document.getElementById('blank_page_title').value
+            // Sanity checking is left to MediaWiki itself
+        } else {
+            title = url_analyzer.title
+        }
+        if (issue_id.match(/^[A-Za-z0-9\-\.]+$/)) {
+            let href = "/index.php?title="
+            href += url_analyzer.namespace + "Vissue-" + issue_id
+            href += url_analyzer.separator + title
+            href += "&action=edit&source=" + url_analyzer.version
+            if (create_blank) {
+                href += "&clone=false"
             }
+            if (document.getElementById('no_bits_checkbox').checked) {
+                let issue_url = document.getElementById('issue_url').value
+                try {
+                    new URL(issue_url)
+                } catch {
+                    console.log("Unable to parse issue URL")
+                    return
+                }
+                href += '&issue_url=' + encodeURI(issue_url)
+            }
+            console.log(href)
+            window.location.href = href
+        } else {
+            alert(browser.i18n.getMessage("InvalidIssueNumber"))
         }
     }
+
+    let new_issue_link = document.createElement("li")
+    new_issue_link.innerHTML = "<span><a>" + browser.i18n.getMessage("NewIssue") + "</a></span>"
+    new_issue_link.onclick = () => document.getElementById('new_issue_dialog').showModal()
+
     document.getElementById("ca-history").insertAdjacentElement("beforebegin", new_issue_link)
 }
 
@@ -48,6 +109,12 @@ function populateIssue(url_analyzer) {
         return
     }
 
+    // Figure out if we should clone an existing page
+    let clone = true
+    if (url_analyzer.search_params.has("clone") && url_analyzer.search_params.get("clone") == "false") {
+        clone = false
+    }
+
     // Make the page inaccessible while its populated and saved
     let grayout = document.createElement("div")
     grayout.style.position = "fixed"
@@ -68,12 +135,22 @@ function populateIssue(url_analyzer) {
     document.getElementsByTagName("html")[0].insertAdjacentElement("afterbegin", grayout)
 
     // Ok, lets go ahead
-    let wiki_api = new WikiApi()
-    let production_query = {page: url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title}
-    wiki_api.getWikiText(production_query).then(production_info => {
+    let fetcher
+    if (!clone) {
+        // If we're not cloning a page, create a mock promise to return an empty text that we can 'rewrite'
+        fetcher = new Promise((resolve) => resolve(""))
+    } else {
+        // Otherwise, fetch the original text
+        let wiki_api = new WikiApi()
+        let production_query = {page: url_analyzer.namespace + source + url_analyzer.separator + url_analyzer.title}
+        fetcher = wiki_api.getWikiText(production_query)
+            .then(production_info => production_info["wikitext"])
+    }
+    
+    fetcher.then(original => {
         // Rewrite links and transclusions
         let rewriter = new PrefixRewriter(url_analyzer.namespace + source + url_analyzer.separator, url_analyzer.namespace + "Vprepub-" + source_naked + url_analyzer.separator)
-        let modified = rewriter.rewrite(production_info["wikitext"])
+        modified = rewriter.rewrite(original)
 
         // Make sure issue pages aren't indexed
         if (!modified.match("__NOINDEX__")) {
@@ -86,17 +163,30 @@ function populateIssue(url_analyzer) {
         if (url_analyzer.lang != null) {
             issue_box += "|lang=" + url_analyzer.lang
         }
+        if (url_analyzer.search_params.has('issue_url')) {
+            issue_box += "|url=" + decodeURI(url_analyzer.search_params.get('issue_url'))
+        }
         issue_box += "}}\n"
         modified = issue_box + modified
 
         document.getElementById("wpTextbox1").textContent = modified
-        document.getElementById("wpSummary").setAttribute("value", "Clone of " + source + " production page for issue " + url_analyzer.issue_id)
+        
+        // Create a summary for this edit
+        let summary
+        if (clone) {
+            summary = "Clone of " + source + " production page for issue " + url_analyzer.issue_id
+        } else {
+            summary = "New page for issue " + url_analyzer.issue_id
+        }
+        document.getElementById("wpSummary").setAttribute("value", summary)
 
         // Submit, so people aren't tempted to start editing right away
         document.getElementById("editform").submit()
     }).catch(error => {
         console.log("Couldn't fetch wikitext from production page:", error)
     })
+
+
 }
 
 /**

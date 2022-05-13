@@ -8,8 +8,20 @@
     "NewIssue": {
         "message": "Nieuw issue"
     },
-    "IssueNumber": {
-        "message": "Issuenummer"
+    "NewIssueID": {
+        "message": "Issue-ID"
+    },
+    "NotOnBITS": {
+        "message": "Niet op BITS"
+    },
+    "butOnURL": {
+        "message": "maar op URL"
+    },
+    "CreateEmptyPage": {
+        "message": "Maak nieuwe (lege) pagina"
+    },
+    "withTitle": {
+        "message": "met de titel"
     },
     "InvalidIssueNumber": {
         "message": "Ongeldig issuenummer!"
