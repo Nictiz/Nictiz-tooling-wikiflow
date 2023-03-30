@@ -329,7 +329,7 @@ class Migrator {
      *                                   target_prefix is unneeded or will be generated.
      * @throws {Error} - when the input is not fit for the intended action.
      */
-    setPrefixes(source_prefix, target_prefix) {        
+    setPrefixes(source_prefix, target_prefix) {       
         if (this.action == this.ACTIONS.duplicate) {
             this.source_prefix = source_prefix
             this.target_prefix = target_prefix
@@ -337,23 +337,24 @@ class Migrator {
             this.source_prefix = source_prefix
             this.target_prefix = null
         } else {
-            let parts = source_prefix.match(/([A-Za-z]+:)?V(prepub-)?([A-Za-z0-9\.]+?)[\/_]?$/)
+            let parts = source_prefix.match(/([A-Za-z]+:)?([A-Za-z:]+:)?V(prepub-)?([A-Za-z0-9\.]+?)[\/_]?$/)
             if (parts == null) {
                 throw new PrefixError("source", "Geen valide prefix")
             }
 
+            let subnamespace = (parts[2] == undefined) ? "" : parts[2]
             if (this.action == this.ACTIONS.publish) {
-                if (parts[2] == null) {
+                if (parts[3] == null) {
                     throw new PrefixError("source", browser.i18n.getMessage("InvalidPrefixForPrepub"))
                 }
                 this.source_prefix = source_prefix
-                this.target_prefix = parts[1] + "V" + parts[3]
+                this.target_prefix = parts[1] + subnamespace + "V" + parts[4]
             } else if (this.action == this.ACTIONS.create_prepub) {
-                if (parts[2] != null) {
+                if (parts[3] != null) {
                     throw new PrefixError("source", browser.i18n.getMessage("PrefixIsAlreadyPrepub"))
                 }
                 this.source_prefix = source_prefix
-                this.target_prefix = parts[1] + "Vprepub-" + parts[3]
+                this.target_prefix = parts[1] + subnamespace + "Vprepub-" + parts[4]
             }
         }
 
