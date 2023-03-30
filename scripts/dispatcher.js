@@ -195,8 +195,12 @@ function populateIssue(url_analyzer) {
  */
 function insertIntegrateIssueLink(url_analyzer) {
     let wiki_api = new WikiApi()
-    wiki_api.query({"list": "prefixsearch", "pssearch": url_analyzer.namespace + "Vprepub-", "pslimit": 500}).then(query => {
 
+    wiki_api.query({
+        "list": "prefixsearch",
+        "pssearch": url_analyzer.namespace + "Vprepub-",
+        "pslimit": 500
+    }).then(query => {
         // Create a dropdown list to choose the prepub version we want to integrate with
         let dropdown = document.createElement("select")
         

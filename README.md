@@ -58,7 +58,7 @@ Cloning is probably the easiest of all requirements for a Mediawiki page, as an 
 
 Merging back changes is harder. There is also no standard way to merge two pages on Mediawiki, let alone to intelligently merge two pages which share a common ancestor so that changes on both sides can be smoothly incorporated. This is where this tool comes in. The MediaWiki API can be queried for the source pages and using a combination of [node-diff3](https://www.npmjs.com/package/node-diff3) and [diff-match-patch](https://github.com/google/diff-match-patch) the basic git merge algorithm can be re-implemented. When merge conflicts occur, [CodeMirror](https://codemirror.net/index.html) offers a great interface to manually manage 3-way merges.
 
-There just one fly in the ointment: unlike git, Mediawiki has no idea of what the common ancestor is when merging two pages, which is essential. It's also hard to do a full comparison between an entire set of pages of different branches.
+There's just one fly in the ointment: unlike git, Mediawiki has no idea of what the common ancestor is when merging two pages, which is essential. It's also hard to do a full comparison between an entire set of pages of different branches.
 
 ### Rebuilding Git*Flow* rather than git
 
@@ -90,14 +90,15 @@ Of course, some important git features missing from this approach. For example, 
 
 Recognizing that three tiers of pages are needed, it is possible to create a general format for the URLs ("branches") of these different tiers:
 
-* Live pages will be found at: `[base]/[namespace]:V[version]_[page title]`. There will be only issue pages for pages that need to be edited.
-* Prepub pages will be found at: `[base]/[namespace]:Vprepub-[version]_[page title]`. The full set of live pages will be duplicated here.
-* Issue pages will be found at: `[base]/[namespace]:Vissue-[issue id]_[page title]`
+* Live pages will be found at: `[base]/[namespace{:subnamespace}]:V[version]_[page title]`. There will be only issue pages for pages that need to be edited.
+* Prepub pages will be found at: `[base]/[namespace{:subnamespace}]:Vprepub-[version]_[page title]`. The full set of live pages will be duplicated here.
+* Issue pages will be found at: `[base]/[namespace{:subnamespace}]:Vissue-[issue id]_[page title]`
 
 It should be understood that adopting this approach is an all-or-nothing affair, but only for a specific combination of namespace and version. Any combination might use its own rythm for a release cycle or might opt to not use this approach altogether.
 
 The live and prepub tier for a specific combination of namespace and version will be referred to as an _environment_. For example, all pages starting with URL path `/MedMij:Vprepub-2020.01...` belong to the prepub environment for MedMij version 2020.01.
 
+The subnamespace is introduced to allow for artifacts with independant lifecycles to be clustered in the same namespace. Without the subnamespace, the scope of a namespace is restricted to the a set of artifacts that have the same lifecycle (like an information standard or a set of related information standards). This is not quite the intention of a namespace. For example, MedMij recognizes some independent artifacts that are not part of a MedMij release, like a general implementation guide. To allow for this, the optional subnamespace can be used, e.g. "MedMij:FO:V1_Functioneel ontwerp".
 ### Creating an issue page
 
 Creating an issue page is _always_ done from a live page. Issue pages should be created for any page which needs to be edited. When this tool is installed (and the logged in user has edit rights), a new tab will appear that offers the option to create a new issue page. When the user clicks on this tab, a popup appears to fill in the issue id; this is needed to create the proper URL.

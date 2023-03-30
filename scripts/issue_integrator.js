@@ -47,20 +47,7 @@ class IssueIntegrator {
     }
 
     integrate() {
-        // Page might not exists, so we can't query the page properties to find the namespace id. Instead we have to 
-        // query all namespace and find the one that matches our name.
-        this.wiki_api.query({"meta": "siteinfo", "siprop": "namespaces"}).then(result => {
-            let target_ns = this.url_analyzer.namespace.replace(":", "")
-            for (const key in result["namespaces"]) {
-                let ns_info = result["namespaces"][key]
-                if (ns_info["canonical"] == target_ns) {
-                    return ns_info["id"]
-                }
-            }
-            throw new Error("Namespace couldn't be found")
-        }).then(namespace_id => {
-            return this.extractIssueIdsFromSiteInfo(namespace_id)
-        }).then(issue_ids => {
+        this.extractIssueIdsFromSiteInfo(this.url_analyzer.namespace).then(issue_ids => {
             this.populateIssues(issue_ids)
 
             // If the "merge_issue" URL parameter is given, select the specified issue
@@ -74,19 +61,23 @@ class IssueIntegrator {
 
     /**
      * Find all issues we can integrate here by searching for issue pages with the same title.
-     * @param {number} namespace_id - The id of the Wiki namespace to search
+     * @param {string} namespace - The full name of the namespace
      * @returns {Promise<[number]|Error>} A list of page ids or an error on failure
      */
-    async extractIssueIdsFromSiteInfo(namespace_id) {
+    async extractIssueIdsFromSiteInfo(namespace) {
         let issue_ids = []
 
         // Inspect all pages starting with Vissue in this namespace
         let info = null
         try {
-            info = await this.wiki_api.query({"list": "prefixsearch", "pssearch": "Vissue", "psnamespace": namespace_id, "pslimit": 500})
+            info = await this.wiki_api.query({
+                "list":        "prefixsearch",
+                "pssearch":    namespace + "Vissue",
+                "pslimit":     500
+            })
         } catch (error) {
             console.log(error)
-            throw new Error("Couldn't query the pages in the MedMij namespace")
+            throw new Error("Couldn't query the pages in the relevant namespace")
         }
 
         for (let key in info.prefixsearch) {

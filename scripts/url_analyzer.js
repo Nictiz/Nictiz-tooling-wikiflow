@@ -6,7 +6,10 @@
  * - realm: "production", "prepub" or "issue"
  * - title: The actual title of the page, without version info and such. This will be in the URL format, with
  *          underscores instead of spaces.
- * - namespace: The namespace of the current page, if any, including the ":".
+ * - namespace: The full namespace of the current page (mainnamespace and subnamespace), if any, including the ":".
+ *              This is a computated field that is always available, although it may be an empty string.
+ * - mainnamespace: The namespace of the current page, if any, without the ":".
+ * - subnamespace: The subnamespace following the namespace (following the main namespace), if any, without the ":".
  * - version: The version according to the title (without the leading "V"). Only filled when real is "production" or
  *            "prepub".
  * - issue_id: The issue id for the current page. Only filled if realm is "issue".
@@ -27,6 +30,7 @@ class TitleAnalyzer {
         delete this.realm
         delete this.title
         delete this.namespace
+        delete this.subnamespace
         delete this.separator
         delete this.version
         delete this.issue_id
@@ -45,15 +49,18 @@ class TitleAnalyzer {
     _analyzeTitle(title) {
         title = title.replace(new RegExp(" ", "g"), "_") // Normalize the title to URL format, using underscores instead of spaces
 
-        let parts = title.match(/^(?<namespace>[A-Za-z]+:)?V(?<realm>issue-|prepub-)?(?<version>.*?)(?<separator>[_\/])(?<title>.*)$/)
+        let parts = title.match(/^(?<mainnamespace>[A-Za-z]+:)?(?<subnamespace>[A-Za-z:]+:)?V(?<realm>issue-|prepub-)?(?<version>.*?)(?<separator>[_\/])(?<title>.*)$/)
 
         if (parts !== null) {
             let groups = parts.groups
             if ("title" in groups && "separator" in groups && "version" in groups && "realm" in groups) {
                 this.title     = groups["title"]
                 this.separator = groups["separator"]
-                if ("namespace" in groups) {
-                    this.namespace = groups["namespace"]
+                if ("mainnamespace" in groups) {
+                    this.mainnamespace = groups["mainnamespace"].split(":")[0]
+                }
+                if ("subnamespace" in groups && groups["subnamespace"] != undefined) {
+                    this.subnamespace = groups["subnamespace"].split(":")[0]
                 }
                 if (groups["realm"] == "issue-") {
                     this.realm = "issue"
@@ -67,6 +74,21 @@ class TitleAnalyzer {
                 }
             }
         }
+    }
+
+    /**
+     * Return the full namespace in the form of "namespace:subnamespace:", or only "namespace:" if no subnamespace is
+     * present.
+     */
+    get namespace() {
+        let namespace = "";
+        if (this.mainnamespace) {
+            namespace = this.mainnamespace + ":"
+            if (this.subnamespace) {
+                namespace += this.subnamespace + ":"
+            }
+        }
+        return namespace
     }
 }
 
