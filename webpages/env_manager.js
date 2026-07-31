@@ -48,7 +48,7 @@ class ManageUI {
             } else {
                 user_box.innerHTML = browser.i18n.getMessage("NotLoggedIn")
             }
-            if (result.userinfo.id == "0" || !"delete" in result.userinfo.rights && !"duplicate" in result.userinfo.rights) {
+            if (result.userinfo.id == "0" || !"delete" in result.userinfo.rights) {
                 this._showError(browser.i18n.getMessage("InsufficientPermissions"))
             } else {
                 this.has_permissions = true
@@ -176,10 +176,18 @@ class ManageUI {
                         }
                     }
                     if (proceed) {
-                        if (pair.source_duplicated) {
-                            message_html += "<li>" + browser.i18n.getMessage("SourcePageDuplicatedTo") + " " + pair.target_title + "</li>"
+                        if (pair.source_copied) {
+                            message_html += "<li>" + browser.i18n.getMessage("SourcePageCopiedTo") + " " + pair.target_title + "</li>"
                         } else {
-                            message_html += "<li>" + browser.i18n.getMessage("CouldntDuplicateSourcePage") + "</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntCopySourcePage") + "</li>"
+                            proceed = false
+                        }
+                    }
+                    if (proceed) {
+                        if (pair.history_merged) {
+                            message_html += "<li>" + browser.i18n.getMessage("PageHistoryMerged") + "</li>"
+                        } else {
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntMergeHistory") + "</li>"
                             proceed = false
                         }
                     }
@@ -500,7 +508,8 @@ class Pair {
 
         this.source_deleted              = false
         this.target_deleted              = false
-        this.source_duplicated           = false
+        this.source_copied               = false
+        this.history_merged              = false
         this.target_rewritten            = false
         this.target_contains_prefix_from = false
         this.source_protected            = null
@@ -527,7 +536,7 @@ class Pair {
 
     /**
      * Duplicate the source page to the target page, preserving full history and rewriting the links.
-     * This method will set the flags this.source_duplicated and this.target_rewritten.
+     * This method will set the flags this.source_copied, this.target_rewritten and this.history_merged
      * @param {string} source_prefix - The link prefix to rewrite
      * @param {string} target_prefix - The link prefix to rewrite source_prefix to 
      * @param {string} rewrite_summary - The page summary when performing the rewrite
@@ -535,19 +544,11 @@ class Pair {
      *                                          false, add it if it isn't there yet. If null, the __NOINDEX__ tags will
      *                                          not be affected. 
      */
-    async duplicate(source_prefix, target_prefix, rewrite_summary, allow_indexing = null) {
-        await browser.tabs.sendMessage(script_tab, {type: "wikiDuplicatePage", title: this.source_title, new_title: this.target_title})
-        this.source_duplicated = true
+    async duplicate(source_prefix, target_prefix, rewrite_summary, allow_indexing) {
+        // Get the wikitext of the source page
+        let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {page: this.source_title}})
 
-        // Get the id of the new live page
-        let payload = {"titles": this.target_title}
-        let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
-        this.duplicated_id = Object.keys(id_query["pages"])[0]
-
-        // Get the wikitext of the new live page
-        let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: this.duplicated_id}})
-
-        // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag
+        // Rewrite the links/transclusions and add/remove the __NOINDEX__ tag
         let rewriter = new PrefixRewriter(source_prefix, target_prefix)
         let wikitext = rewriter.rewrite(text_query["wikitext"])
         if (allow_indexing !== null) {
@@ -560,8 +561,20 @@ class Pair {
                 }
             }
         }
-        await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: this.duplicated_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
-        this.target_rewritten            = true
+
+        // Create the page with the rewritten text
+        await browser.tabs.sendMessage(script_tab, {type: "wikiCreateNew", title: this.target_title, text: wikitext, summary: rewrite_summary})
+        this.source_copied = true
+        this.target_rewritten = true
+
+        // Get the id of the new live page
+        let payload = {"titles": this.target_title}
+        let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
+        this.duplicated_id = Object.keys(id_query["pages"])[0]
+
+        await browser.tabs.sendMessage(script_tab, {type: "wikiMergeHistory", source: this.source_title, target: this.target_title, summary: rewrite_summary})
+        this.history_merged = true
+
         this.target_contains_prefix_from = rewriter.containsPrefixFrom(wikitext)
     }
 

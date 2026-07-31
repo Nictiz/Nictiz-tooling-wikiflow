@@ -107,11 +107,17 @@
     "CouldntRemoveOriginalPage": {
         "message": "kon oorspronkelijke pagina niet verwijderen"
     },
-    "SourcePageDuplicatedTo": {
-        "message": "bronpagina gedupliceerd naar"
+    "SourcePageCopiedTo": {
+        "message": "bronpagina gekopieerd naar"
     },
-    "CouldntDuplicateSourcePage": {
-        "message": "kon bronpagina niet dupliceren"
+    "CouldntCopySourcePage": {
+        "message": "kon bronpagina niet kopiëren"
+    },
+    "PageHistoryMerged": {
+        "message": "paginahistorie overgezet naar doelpagina"
+    },
+    "CouldntMergeHistory": {
+        "message": "kon paginaghistorie niet overzetten naar doelpagina"
     },
     "LinksAreRewritten": {
         "message": "links herschreven"

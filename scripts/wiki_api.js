@@ -21,12 +21,6 @@ class WikiApi {
          * in a Promise.
          */
         this._token_querying = null
-
-        /**
-         * There's a special token used for the Duplicator plugin, which doesn't provide an API call. This token is
-         * scraped from the webpage (see the duplicatePage() method)
-        */
-        this._duplicator_token_querying = null
     }
 
     /**
@@ -165,64 +159,46 @@ class WikiApi {
     }
 
     /**
-     * Duplicate a wiki page with its full history. It requires the Duplicator extension to be installed on the wiki.
-     * 
-     * WARNING: This is not an actual API call! It uses the front-end provided by the Duplicator extension and tries to
-     * interpret the output. This makes it a bit of a top-heavy method to use.
-     * @param {string} title - The title (including namespace) of the page to duplicate
-     * @param {string} new_title - The title (including namespace) of the new page which should be created.
+     * Create a new page with the supplied text.
+     * @param {string} title - The title of the page to create
+     * @param {string} text - The text of the page
+     * @param {string} summary - The summary message for creating the new page
      */
-    async duplicatePage(title, new_title) {
-        // Let's get a token for this operiation if we don't have it yet. We (apparently) can't use the API token,
-        // we'll have to scrape a token from the front-end form.
-        if (this._duplicator_token_querying == null) {
-            this._duplicator_token_querying = fetch(getUrl(this.api_url)).then(form => {
-                return form.text()
-            }).then(text => {
-                let parser = new DOMParser()
-                let html = parser.parseFromString(text, "text/html")
-                return html.querySelector("div#mw-content-text input[name='token']").value    
-            })
+    async createNewPage(title, text, summary) {
+        let token = await this._getToken()
+        let json = await this._postJSON({
+            action:     "edit",
+            title:      title,
+            text:       text,
+            createonly: true,
+            summary:    summary,
+            token:      token
+        })
+        if (!("edit" in json && json["edit"]["result"] == "Success")) {
+            throw new Error(`Failed to create page with the ${title}. Response was: "${JSON.stringify(json)}"`)
         }
-        let token = await this._duplicator_token_querying // Stall all calls until we have a token
+    }
 
-        // Now make the call to duplicate the page, including the history
-        let response = await this._post({
-            source:  title,
-            dest:    new_title,
-            history: 1,
-            token:   token
-        }, getUrl(this.api_url))
-
-        if (response.ok) {
-            // It's a bit tricky to actually parse the response, because we
-            // might run into different language settings. Instead we use a
-            // cheap party trick to determine success: only on success there
-            // will be a bullet list with the results in the specified location
-            // (otherwise there will be a paragraph here).
-            let response_text = await response.text()
-            let parser = new DOMParser()
-            let response_html = parser.parseFromString(response_text, "text/html")
-            let li = response_html.querySelector("div#mw-content-text > form + ul > li")
-            if (li === null) {
-                throw new Error(`Error trying to use the Duplicator extension: "${li.innerText}".`)
-            }
-        } else {
-            throw new Error(`Error trying to use the Duplicator extension: got a response with status code ${response.status} and status text "${response.statusText}".`)
+    /**
+     * Merge page history.
+     * @param {string} source - The title of the page to merge the history from
+     * @param {string} target - The title of the page to merge the history into
+     * @param {string} summary - The summary message for creating the new page
+     */
+    async mergeHistory(source, target, summary) {
+        let token = await this._getToken()
+        let json = await this._postJSON({
+            action:     "mergehistory",
+            from:       source,
+            to:         target,
+            reason:     summary,
+            token:      token
+        })
+        console.log(json)
+        if ("mergehistory" in json) {
+            return json["mergehistory"]
         }
-
-        // Stupid little helper function to turn the API url into the form URL for this extension; since this is not an
-        // API call, we have to use the web page as the url.
-        // We need this function because we have to make sure that the the very first thing this method does is to
-        // create the Promise for the token if it doesn't exist yet, otherwise race conditions might occur. And since
-        // this url is needed for both token querying and the actual page call, we've got this nested function.
-        function getUrl(api_url) {
-            let url = new URL(api_url)
-            url.pathname = "wiki/Special:Duplicator"
-            url.search   = ""
-            return url.toString()
-        }
-        
+        throw new Error(`Failed to merge history from ${from_title} to ${to_title}. Response was: "${JSON.stringify(json)}"`)
     }
 
     /**

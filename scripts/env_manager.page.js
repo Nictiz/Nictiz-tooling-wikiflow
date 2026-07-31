@@ -17,8 +17,10 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         return wiki_api.getWikiText(message.query_key)
     } else if (message.type == "wikiChangeText") {
         return wiki_api.changePageText(message.page_id, message.new_text, message.summary, message.is_minor)
-    } else if (message.type == "wikiDuplicatePage") {
-        return wiki_api.duplicatePage(message.title, message.new_title)
+    } else if (message.type == "wikiCreateNew") {
+        return wiki_api.createNewPage(message.title, message.text, message.summary)
+    } else if (message.type == "wikiMergeHistory") {
+        return wiki_api.mergeHistory(message.source, message.target, message.summary)
     } else if (message.type == "wikiProtect") {
         return wiki_api.protectPage(message.page_id, message.protections, message.reason)
     }
