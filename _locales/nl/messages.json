@@ -107,11 +107,17 @@
     "CouldntRemoveOriginalPage": {
         "message": "kon oorspronkelijke pagina niet verwijderen"
     },
-    "SourcePageDuplicatedTo": {
-        "message": "bronpagina gedupliceerd naar"
+    "SourcePageExported": {
+        "message": "bronpagina geëxporteerd"
     },
-    "CouldntDuplicateSourcePage": {
-        "message": "kon bronpagina niet dupliceren"
+    "CouldntExportSourcePage": {
+        "message": "bronpagina kon niet geëxporteerd worden"
+    },
+    "PageImportedTo": {
+        "message": "pagina geïmporteerd naar"
+    },
+    "CouldntImportPage": {
+        "message": "kon pagina niet importeren"
     },
     "LinksAreRewritten": {
         "message": "links herschreven"

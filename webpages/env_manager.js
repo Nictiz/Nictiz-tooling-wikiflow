@@ -175,28 +175,24 @@ class ManageUI {
                             }
                         }
                     }
-                    if (proceed) {
+                    if (proceed && pair.source_title) {
+                        if (pair.source_exported) {
+                            message_html += "<li>" + browser.i18n.getMessage("SourcePageExported") + "</li>"
+                        } else {
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntExportSourcePage") + "</li>"
+                            proceed = false
+                        }
+                    }
+                    if (proceed && pair.source_title) {
                         if (pair.source_duplicated) {
-                            message_html += "<li>" + browser.i18n.getMessage("SourcePageDuplicatedTo") + " " + pair.target_title + "</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("PageImportedTo") + " " + pair.target_title + "</li>"
                         } else {
-                            message_html += "<li>" + browser.i18n.getMessage("CouldntDuplicateSourcePage") + "</li>"
+                            message_html += "<li>" + browser.i18n.getMessage("CouldntImportdeletPage") + "</li>"
                             proceed = false
                         }
                     }
-            
-                    if (proceed) {
-                        if (pair.target_rewritten) {
-                            message_html += "<li>" + browser.i18n.getMessage("LinksAreRewritten") + "</li>"
-                            if (pair.target_contains_prefix_from) {
-                                message_html += "<li class='warning'>" + browser.i18n.getMessage("warnTargetContainsPrefix") + "</li>"
-                            }
-                        } else {
-                            message_html += "<li>" + browser.i18n.getMessage("CouldntRewriteLinks") + "</li>"
-                            proceed = false
-                        }
-                    }
-                    
-                    if (proceed && this.migrator.action == this.migrator.ACTIONS.publish) {
+                                
+                    if (proceed && pair.source_title && this.migrator.action == this.migrator.ACTIONS.publish) {
                         if (pair.duplicated_protected) {
                             message_html += "<li>" + browser.i18n.getMessage("NewPageProtected") + "</li>"
                         } else {
@@ -500,8 +496,8 @@ class Pair {
 
         this.source_deleted              = false
         this.target_deleted              = false
+        this.source_exported             = false
         this.source_duplicated           = false
-        this.target_rewritten            = false
         this.target_contains_prefix_from = false
         this.source_protected            = null
         this.target_protected            = null
@@ -527,38 +523,33 @@ class Pair {
 
     /**
      * Duplicate the source page to the target page, preserving full history and rewriting the links.
-     * This method will set the flags this.source_duplicated and this.target_rewritten.
+     * This method will set the flags this.source_exported, this.source_duplicated and this.target_contains_prefix.
      * @param {string} source_prefix - The link prefix to rewrite
      * @param {string} target_prefix - The link prefix to rewrite source_prefix to 
-     * @param {string} rewrite_summary - The page summary when performing the rewrite
      * @param {boolean|null} [allow_indexing] - if true, remove the __NOINDEX__ magic keyword(s) from the new page, if
      *                                          false, add it if it isn't there yet. If null, the __NOINDEX__ tags will
      *                                          not be affected. 
      */
-    async duplicate(source_prefix, target_prefix, rewrite_summary, allow_indexing = null) {
+    async duplicate(source_prefix, target_prefix, allow_indexing = null) {
+        // There is no source to duplicate, so return empty handed
+        if (!this.source_title) return
+
         let raw_xml = await browser.tabs.sendMessage(script_tab, {type: "wikiExportPage", title: this.source_title, new_title: this.target_title})
+        this.source_exported = true
+
+        // Modify title in the XML to upload (simple regex approach)
         raw_xml = raw_xml.replace(`<title>${this.source_title}</title>`, `<title>${this.target_title}</title>`)
-        await browser.tabs.sendMessage(script_tab, {type: "wikiImportPage", xml: raw_xml})
-        this.source_duplicated = true
 
-        // let parser = new DOMParser()
-        // let xml = parser.parseFromString(raw_xml, 'application/xml')
-        // let revisions = xml.querySelector('page').querySelectorAll('revision')
-        // let text_node = revisions[revisions.length - 1].querySelector('text')
-        // let wiki_text = text_node.textContent
-        // console.log(xml)
+        // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag. For this we need to
+        // actually manipulate the XML.
+        const parser = new DOMParser()
+        let xml = parser.parseFromString(raw_xml, 'application/xml')
+        let revisions = xml.querySelector('page').querySelectorAll('revision')
+        let wikitext_node = revisions[revisions.length - 1].querySelector('text')
+        let wikitext = wikitext_node.textContent
 
-        // Get the id of the new live page
-        let payload = {"titles": this.target_title}
-        let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
-        this.duplicated_id = Object.keys(id_query["pages"])[0]
-
-        // // Get the wikitext of the new live page
-        let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: this.duplicated_id}})
-
-        // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag
         let rewriter = new PrefixRewriter(source_prefix, target_prefix)
-        let wikitext = rewriter.rewrite(text_query["wikitext"])
+        wikitext = rewriter.rewrite(wikitext)
         if (allow_indexing !== null) {
             if (allow_indexing) {
                 wikitext = wikitext.replace(new RegExp(/^\s*__NOINDEX__\s*$\n/, "gm"), "") // Remove lines that only consists of __NOINDEX__, without leaving an empty line behind 
@@ -569,9 +560,18 @@ class Pair {
                 }
             }
         }
-        await browser.tabs.sendMessage(script_tab, {type: "wikiChangeText", page_id: this.duplicated_id, new_text: wikitext, is_minor: true, summary: rewrite_summary})
-        this.target_rewritten            = true
+        wikitext_node.textContent = wikitext
         this.target_contains_prefix_from = rewriter.containsPrefixFrom(wikitext)
+
+        // Upload the moified XML
+        const serializer = new XMLSerializer()
+        await browser.tabs.sendMessage(script_tab, {type: "wikiImportPage", xml: serializer.serializeToString(xml)})
+        this.source_duplicated = true
+
+        // Get the id of the new live page
+        let payload = {"titles": this.target_title}
+        let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
+        this.duplicated_id = Object.keys(id_query["pages"])[0]
     }
 
     /**
