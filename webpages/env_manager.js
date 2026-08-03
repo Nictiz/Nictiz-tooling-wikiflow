@@ -536,15 +536,24 @@ class Pair {
      *                                          not be affected. 
      */
     async duplicate(source_prefix, target_prefix, rewrite_summary, allow_indexing = null) {
-        await browser.tabs.sendMessage(script_tab, {type: "wikiDuplicatePage", title: this.source_title, new_title: this.target_title})
+        let raw_xml = await browser.tabs.sendMessage(script_tab, {type: "wikiExportPage", title: this.source_title, new_title: this.target_title})
+        raw_xml = raw_xml.replace(`<title>${this.source_title}</title>`, `<title>${this.target_title}</title>`)
+        await browser.tabs.sendMessage(script_tab, {type: "wikiImportPage", xml: raw_xml})
         this.source_duplicated = true
+
+        // let parser = new DOMParser()
+        // let xml = parser.parseFromString(raw_xml, 'application/xml')
+        // let revisions = xml.querySelector('page').querySelectorAll('revision')
+        // let text_node = revisions[revisions.length - 1].querySelector('text')
+        // let wiki_text = text_node.textContent
+        // console.log(xml)
 
         // Get the id of the new live page
         let payload = {"titles": this.target_title}
         let id_query = await browser.tabs.sendMessage(script_tab, {type: "wikiQuery", payload: payload})
         this.duplicated_id = Object.keys(id_query["pages"])[0]
 
-        // Get the wikitext of the new live page
+        // // Get the wikitext of the new live page
         let text_query = await browser.tabs.sendMessage(script_tab, {type: "wikiGetText", query_key: {pageid: this.duplicated_id}})
 
         // Rewrite the links/transclusions on the live page and add/remove the __NOINDEX__ tag

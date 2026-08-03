@@ -21,12 +21,6 @@ class WikiApi {
          * in a Promise.
          */
         this._token_querying = null
-
-        /**
-         * There's a special token used for the Duplicator plugin, which doesn't provide an API call. This token is
-         * scraped from the webpage (see the duplicatePage() method)
-        */
-        this._duplicator_token_querying = null
     }
 
     /**
@@ -165,64 +159,62 @@ class WikiApi {
     }
 
     /**
-     * Duplicate a wiki page with its full history. It requires the Duplicator extension to be installed on the wiki.
-     * 
-     * WARNING: This is not an actual API call! It uses the front-end provided by the Duplicator extension and tries to
-     * interpret the output. This makes it a bit of a top-heavy method to use.
-     * @param {string} title - The title (including namespace) of the page to duplicate
-     * @param {string} new_title - The title (including namespace) of the new page which should be created.
+     * Export a page in XML format.
+     * NOTE: This is not an API call, there doesn't seem to be an export API.
+     * @param {string} title - The title of the page to export
+     * @returns {string|Error} - The raw XML of the xport, or an Error if the request fails.
      */
-    async duplicatePage(title, new_title) {
-        // Let's get a token for this operiation if we don't have it yet. We (apparently) can't use the API token,
-        // we'll have to scrape a token from the front-end form.
-        if (this._duplicator_token_querying == null) {
-            this._duplicator_token_querying = fetch(getUrl(this.api_url)).then(form => {
-                return form.text()
-            }).then(text => {
-                let parser = new DOMParser()
-                let html = parser.parseFromString(text, "text/html")
-                return html.querySelector("div#mw-content-text input[name='token']").value    
-            })
+
+    async exportPage(title) {
+        let params = {
+            title: "Special:Export",
+            catname: "",
+            pages: title
         }
-        let token = await this._duplicator_token_querying // Stall all calls until we have a token
-
-        // Now make the call to duplicate the page, including the history
-        let response = await this._post({
-            source:  title,
-            dest:    new_title,
-            history: 1,
-            token:   token
-        }, getUrl(this.api_url))
-
+        let url = new URL(window.location.href)
+        url.pathname = "wiki/Special:Export"
+        let response = await this._post(params, url)
         if (response.ok) {
-            // It's a bit tricky to actually parse the response, because we
-            // might run into different language settings. Instead we use a
-            // cheap party trick to determine success: only on success there
-            // will be a bullet list with the results in the specified location
-            // (otherwise there will be a paragraph here).
-            let response_text = await response.text()
-            let parser = new DOMParser()
-            let response_html = parser.parseFromString(response_text, "text/html")
-            let li = response_html.querySelector("div#mw-content-text > form + ul > li")
-            if (li === null) {
-                throw new Error(`Error trying to use the Duplicator extension: "${li.innerText}".`)
-            }
-        } else {
-            throw new Error(`Error trying to use the Duplicator extension: got a response with status code ${response.status} and status text "${response.statusText}".`)
+            let xml = await response.text()
+            return xml;
         }
 
-        // Stupid little helper function to turn the API url into the form URL for this extension; since this is not an
-        // API call, we have to use the web page as the url.
-        // We need this function because we have to make sure that the the very first thing this method does is to
-        // create the Promise for the token if it doesn't exist yet, otherwise race conditions might occur. And since
-        // this url is needed for both token querying and the actual page call, we've got this nested function.
-        function getUrl(api_url) {
-            let url = new URL(api_url)
-            url.pathname = "wiki/Special:Duplicator"
-            url.search   = ""
-            return url.toString()
+        throw new Error(`Error exporting wiki page ${title}: ${reponse}".`)
+    }
+
+    /**
+     * Import a previously exported page in XML format. The full history will be imported, and users will be matched to
+     * the existing users.
+     * @param {string} xml - The raw XML to import
+     * @returns {Object|Error} - The resonse in JSON format from the API, or an Error if the request fails.
+     */
+    async importPage(xml) {
+        let token = await this._getToken()
+
+        // POST'ing to import requires multipart/form-data, which is different from other
+        // requests.
+        let form_data  = new FormData();
+        form_data.append("action", "import")
+        form_data.append("fullhistory", true)
+        form_data.append("assignknownusers", true)
+        form_data.append("interwikiprefix", "publish")
+        form_data.append("format", "json")
+        form_data.append("token", token)
+
+        let xml_blob = new Blob([xml], { type: "text/xml" });
+        form_data.append("xml", xml_blob);
+        
+        let response = await fetch(this.api_url, {
+            method: 'POST',
+            body: form_data
+        })
+        
+        let json = await response.json()
+        if ('import' in json) {
+            return json['import']
         }
         
+        throw new Error(`Error importing wiki page. Response was: "${JSON.stringify(json)}`)
     }
 
     /**
