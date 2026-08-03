@@ -54,7 +54,7 @@ For draft pages, [version] would simply be replaced with something like "draft".
 
 ### Cloning and merging
 
-Cloning is probably the easiest of all requirements for a Mediawiki page, as an existing page can simple be copied to a new page. However, the page history is not copied, which is an important feature of Gitflow. This problem can be solved using the [Duplicator MediaWiki extension](https://www.mediawiki.org/wiki/Extension:Duplicator) (this requires a change to the installation, but it is trivial).
+Cloning is probably the easiest of all requirements for a Mediawiki page, as an existing page can simple be copied to a new page. However, the page history is not copied, which is an important feature of Gitflow. When this tool was written, there was a MediaWiki extension that could do this ([Duplicator](https://www.mediawiki.org/wiki/Extension:Duplicator)). However, this extension is deprecated at the moment. A somewhat clunkier alternative is to make an export of a wiki page with full history, and then import it under a different title, which is the solution that is currently implemented.
 
 Merging back changes is harder. There is also no standard way to merge two pages on Mediawiki, let alone to intelligently merge two pages which share a common ancestor so that changes on both sides can be smoothly incorporated. This is where this tool comes in. The MediaWiki API can be queried for the source pages and using a combination of [node-diff3](https://www.npmjs.com/package/node-diff3) and [diff-match-patch](https://github.com/google/diff-match-patch) the basic git merge algorithm can be re-implemented. When merge conflicts occur, [CodeMirror](https://codemirror.net/index.html) offers a great interface to manually manage 3-way merges.
 
