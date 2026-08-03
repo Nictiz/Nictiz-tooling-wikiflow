@@ -147,7 +147,7 @@ class ManageUI {
             }
 
             // Perform the action and report each outcome to the pairs table
-            this.migrator.performAction(active_indexes, (index, is_successful, pair) => {
+            this.migrator.performActions(active_indexes, (index, is_successful, pair) => {
                 let tr = document.getElementById("pairs_table").getElementsByTagName("tr")[index]
                 tr.className = is_successful ? "success" : "failure"
 
@@ -283,6 +283,9 @@ class PrefixError extends Error {
 }
 
 class Migrator {
+    // The maximum number of parallel requests we'd like to fire at the wiki api
+    NUM_PARALLEL_REQUESTS = 10;
+
     /**
      * The main functionality managing an environment.
      *
@@ -418,56 +421,73 @@ class Migrator {
     }
 
     /**
-     * Perform the intended action on all Pair objects in this.pairs.
-     * @param {[boolean]} active_indexes - Indicate for each index in this.pairs whether it should be included.
-     * @param {function} ui_callback - Callback function for the ui which takes the index, the status and Pair object.
+     * Perform the specified action on all the relevant pairs, limiting the number of parallel requests to 
+     * NUM_PARALLEL_REQUESTS.
+     * @param {[boolean]} active_pairs - Indicate for each index in this.pairs whether it should be included.
+     * @param {function} ui_callback - Callback function for the ui which takes the index, the status and Pair object. 
      */
-    async performAction(active_indexes, ui_callback) {
-        let actions = []
-
-        for (let i = 0; i < this.pairs.length; i++) {
-            if (active_indexes[i]) {
-                let pair = this.pairs[i]
-
-                let action = null
-                if (this.action == this.ACTIONS.publish) {
-                    action = pair.delete("target").then(() => {
-                        return pair.duplicate(this.source_prefix, this.target_prefix, "Publish prepub to live environment", true)
-                    }).then(() => {
-                        return pair.protect("duplicated")
-                    }).then(() => {
-                        ui_callback(i, true, pair)
-                    }).catch(err => {
-                        console.log(err)
-                        ui_callback(i, false, pair)
-                    })
-                } else if (this.action == this.ACTIONS.create_prepub || this.action == this.ACTIONS.duplicate) {
-                    let summary        = ""
-                    let allow_indexing = null
-                    if (this.action == this.ACTIONS.create_prepub) {
-                        summary = `Create prepub environment from ${this.source_prefix}`
-                        allow_indexing = false
-                    } else {
-                        summary = `Duplicate ${this.source_prefix} environment to ${this.target_prefix}`
-                    }
-                    action = pair.duplicate(this.source_prefix, this.target_prefix, summary, allow_indexing).then(() => {
-                        ui_callback(i, true, pair)
-                    }).catch(err => {
-                        console.log(err)
-                        ui_callback(i, false, pair)
-                    })   
-                } else if (this.action == this.ACTIONS.delete) {
-                    action = pair.delete("source").then(() => {
-                        ui_callback(i, true, pair)
-                    }).catch(err => {
-                        console.log(err)
-                        ui_callback(i, false, pair)
-                    })   
+    async performActions(active_pairs, ui_callback) {
+        let next_pair_index = 0
+        const worker = async () => {
+            while (true) {
+                const pair_index = next_pair_index++
+                if (pair_index >= this.pairs.length) {
+                    return
                 }
-                actions.push(action)
+                if (active_pairs[pair_index]) {
+                    await this.performAction(pair_index, ui_callback)
+                }
             }
         }
-        await Promise.all(actions)
+        
+        const num_workers = Math.min(this.NUM_PARALLEL_REQUESTS, this.pairs.length);
+        const workers = Array.from({ length: num_workers }, () => worker());
+
+        await Promise.all(workers);
+    }
+
+    /**
+     * Perform the specified action on a Pair, blocking until it's complete.
+     * @param {int} pair_index - The index in this.pairs to perform the specified action on
+     * @param {function} ui_callback - Callback function for the ui which takes the index, the status and Pair object.
+     */
+    async performAction(pair_index, ui_callback) {
+        const pair = this.pairs[pair_index]
+
+        if (this.action == this.ACTIONS.publish) {
+            await pair.delete("target").then(() => {
+                return pair.duplicate(this.source_prefix, this.target_prefix, "Publish prepub to live environment", true)
+            }).then(() => {
+                return pair.protect("duplicated")
+            }).then(() => {
+                ui_callback(pair_index, true, pair)
+            }).catch(err => {
+                console.log(err)
+                ui_callback(pair_index, false, pair)
+            })
+        } else if (this.action == this.ACTIONS.create_prepub || this.action == this.ACTIONS.duplicate) {
+            let summary        = ""
+            let allow_indexing = null
+            if (this.action == this.ACTIONS.create_prepub) {
+                summary = `Create prepub environment from ${this.source_prefix}`
+                allow_indexing = false
+            } else {
+                summary = `Duplicate ${this.source_prefix} environment to ${this.target_prefix}`
+            }
+            await pair.duplicate(this.source_prefix, this.target_prefix, summary, allow_indexing).then(() => {
+                ui_callback(pair_index, true, pair)
+            }).catch(err => {
+                console.log(err)
+                ui_callback(pair_index, false, pair)
+            })   
+        } else if (this.action == this.ACTIONS.delete) {
+            await pair.delete("source").then(() => {
+                ui_callback(pair_index, true, pair)
+            }).catch(err => {
+                console.log(err)
+                ui_callback(pair_index, false, pair)
+            })   
+        }
     }
 }
 
