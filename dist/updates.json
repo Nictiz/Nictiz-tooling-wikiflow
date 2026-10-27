@@ -49,6 +49,10 @@
                 {
                     "version": "0.9.0",
                     "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.9.0/wikiflow-0.9.0.xpi"
+                },
+                {
+                    "version": "0.10.0",
+                    "update_link": "https://github.com/Nictiz/Nictiz-tooling-wikiflow/releases/download/0.10.0/wikiflow-0.10.0.xpi"
                 }
             ]
         }
